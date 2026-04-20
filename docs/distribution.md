@@ -1,6 +1,6 @@
 # Distribution Spec — Tester Release
 
-**Status:** Draft
+**Status:** Draft — assumes the Go single-binary migration in [go-migration.md](go-migration.md) has landed. Supersedes the earlier nginx-hosted plan.
 **Audience:** A small group of existing MyDeck / Readeck self-hosters willing to help test repair workflows.
 **Explicit non-goal:** Production-grade release. No multi-user auth, no hardened defaults, no public signup flow.
 
@@ -8,101 +8,103 @@
 
 ## Goals
 
-1. A tester should be able to go from "heard about it" to "repairing a bookmark" in under 10 minutes, using tools they already have (Docker or nginx/Caddy).
-2. Testers can update to new builds quickly as iteration continues, and can report a specific version back in feedback.
-3. No changes to how app config (Readeck URL, API token, Brave key) is entered — the existing in-app **Settings modal** remains the only configuration surface. Env vars / baked-in config are deliberately out of scope for this round.
-4. Cover both "just give me a container" users and "I already have a reverse proxy" users.
+1. A tester should be able to go from "heard about it" to "repairing a bookmark" in under 5 minutes. One binary download, two flags, done.
+2. Testers can update to new builds by swapping the binary (or re-pulling the image) and can report a specific version via `mydeck-console --version`.
+3. The Readeck API token is entered via the in-app **Settings modal**, same as today. The binary handles the Brave token and Readeck upstream via flags/env.
+4. Cover both "just give me a binary" users and "I'd prefer a Docker image for my compose stack" users.
 
 ## Non-goals (for this round)
 
-- Multi-arch image builds beyond what GitHub Actions gives us for free (`linux/amd64`, `linux/arm64`).
-- Signed images, SBOMs, supply-chain hardening.
+- Multi-arch builds beyond what GitHub Actions gives for free (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`).
+- Signed binaries/images, SBOMs, supply-chain hardening.
 - Automatic Readeck discovery or OAuth — testers paste an API token like today.
-- Persisted per-user server-side state. The app remains a pure SPA with IndexedDB + localStorage.
+- Persisted per-user server-side state. The binary is stateless; the SPA uses IndexedDB + localStorage in the browser.
 
 ---
 
 ## Distribution forms
 
-### A. Docker image (primary path)
+### A. Platform binary (primary path)
 
-A single `nginx:alpine`-based image containing:
+A single statically-linked `mydeck-console` binary per platform, produced by `go build` with the Svelte `dist/` embedded via `go:embed`. It serves the SPA and the three proxies (`/api/`, `/cdx/`, `/brave/`) from one port.
 
-- The Vite-built SPA in `/usr/share/nginx/html`.
-- An nginx config that:
-  - Serves the SPA with SPA-style fallback to `index.html`.
-  - Proxies `/api/` → the tester's Readeck instance.
-  - Proxies `/cdx/` → `https://web.archive.org/cdx/` (no CORS headers from archive.org).
-  - Proxies `/brave/` → `https://api.search.brave.com/` with `X-Subscription-Token` injected server-side (Brave is also CORS-blocked, and this keeps the key off the SPA bundle).
+**Configuration surface (CLI flags; env vars of the same names serve as defaults):**
 
-**Required runtime input (env vars):**
+| Flag / Env | Required | Purpose | Example |
+|---|---|---|---|
+| `--readeck-upstream` / `READECK_UPSTREAM` | Yes | Internal URL of the tester's Readeck instance. Used as the `/api/` proxy target. | `http://readeck:8000` |
+| `--brave-key` / `BRAVE_API_KEY` | No | Brave Search subscription token. When set, the `/brave/` proxy injects it as `X-Subscription-Token`. Unset → the Search tab surfaces a "proxy token missing" error; Archive and Manual still work. | *(unset)* |
+| `--listen` / `LISTEN` | No | Address:port to bind. Default `:8080`. | `:9090` |
 
-| Var | Purpose | Example |
-|---|---|---|
-| `READECK_UPSTREAM` | Internal URL of their Readeck container or host | `http://readeck:8000` |
+The Readeck API token is entered in the in-app **Settings modal** and lives in the browser's `localStorage`. It never reaches the binary's config surface.
 
-**Optional:**
+**Startup behavior:**
 
-| Var | Purpose | Default |
-|---|---|---|
-| `LISTEN_PORT` | Port nginx binds inside the container | `80` |
-| `BRAVE_API_KEY` | Brave Search subscription token. When set, the `/brave/` proxy injects it as `X-Subscription-Token`. Unset → Search tab surfaces a clear "proxy token missing" error but the rest of the app still works. | *(unset)* |
-
-The Readeck API token is still entered via the in-app **Settings modal** and lives in the browser's `localStorage`. `READECK_UPSTREAM` only controls where the reverse proxy forwards `/api/` requests; `BRAVE_API_KEY` only controls what token the `/brave/` proxy injects. Neither is shown in the UI.
-
-**Entrypoint behavior:**
-
-- On container start, `envsubst` renders `/etc/nginx/templates/default.conf.template` → `/etc/nginx/conf.d/default.conf`, substituting `${READECK_UPSTREAM}`, `${LISTEN_PORT}`, and `${BRAVE_API_KEY}`.
-- If `READECK_UPSTREAM` is unset, the container fails fast with a clear error message rather than silently serving a broken app.
-- If `BRAVE_API_KEY` is unset, the container starts anyway — the Brave proxy will forward with an empty token and Brave will return 401, which the SPA surfaces as "proxy token missing".
+- If `--readeck-upstream` is unset, the binary exits immediately with a clear error. No half-working state.
+- If `--brave-key` is unset, the binary starts normally; the `/brave/` proxy forwards an empty token and Brave returns 401, which the SPA surfaces cleanly.
 
 **Publishing:**
 
-- Image pushed to **GHCR** (`ghcr.io/<owner>/mydeck-console`).
-- Tags: `:vX.Y.Z` on every git tag; `:latest` always points at the newest tag (not `main`, so testers don't get half-finished work).
-- Built via GitHub Actions on tag push. Multi-arch (`amd64`, `arm64`) using `docker/build-push-action` + `setup-qemu`.
+- Built via GitHub Actions on tag push. One workflow job matrix-builds:
+  - `linux/amd64`, `linux/arm64`
+  - `darwin/amd64`, `darwin/arm64`
+  - `windows/amd64`
+- Each binary attached to the GitHub Release named `vX.Y.Z`.
+- Checksums (`SHA256SUMS`) attached alongside.
+- `mydeck-console --version` prints the embedded version + commit hash for feedback triage.
 
-**Example tester onboarding (compose snippet in README):**
+**Example tester onboarding (README one-liner):**
+
+```
+# Linux amd64
+curl -L -o mydeck-console https://github.com/<owner>/mydeck-console/releases/latest/download/mydeck-console-linux-amd64
+chmod +x mydeck-console
+./mydeck-console --readeck-upstream http://localhost:8000 --brave-key $BRAVE_API_KEY
+```
+
+Tester opens `http://localhost:8080`, enters their Readeck API token in Settings, is working.
+
+### B. Docker image (secondary path)
+
+For testers running a docker-compose stack who'd rather add a service than drop a binary on the host.
+
+A minimal image: `FROM scratch` (or `gcr.io/distroless/static`) + the binary + `ENTRYPOINT ["/mydeck-console"]`. No nginx, no template substitution, no entrypoint script.
+
+**Publishing:**
+
+- Pushed to GHCR (`ghcr.io/<owner>/mydeck-console`).
+- Tags `:vX.Y.Z` on every git tag; `:latest` points at the newest tag.
+- Multi-arch (`amd64`, `arm64`) via `docker/build-push-action` using the binaries already built by the release workflow.
+
+**Example compose snippet:**
 
 ```yaml
 services:
   mydeck-console:
     image: ghcr.io/<owner>/mydeck-console:latest
+    command:
+      - --readeck-upstream=http://readeck:8000
     environment:
-      READECK_UPSTREAM: http://readeck:8000
-      BRAVE_API_KEY: ${BRAVE_API_KEY:-}  # optional, enables the Search tab
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
     ports:
-      - "8082:80"
+      - "8082:8080"
     depends_on:
       - readeck
 ```
-
-Tester then opens `http://host:8082`, enters their Readeck API token in Settings, and is working.
-
-### B. Static bundle (secondary path)
-
-For testers who already run nginx, Caddy, or Traefik in front of Readeck and would rather not add a container.
-
-- Attach `mydeck-console-vX.Y.Z.tar.gz` (the contents of `dist/`) to each GitHub Release.
-- README section: "Serve behind your own reverse proxy" with:
-  - Where to unpack the files.
-  - The three proxy `location` blocks required (`/api/` → Readeck, `/cdx/` → `web.archive.org`, `/brave/` → `api.search.brave.com` with injected `X-Subscription-Token`).
-  - Minimum headers / CSP notes if any.
-
-No rendered nginx config is shipped (the rendered `.conf` files contain the Brave token and are gitignored). The `nginx/*.conf.template` files in the repo plus `./render-nginx.sh` serve as the reference and are called out in the README.
 
 ---
 
 ## Release process
 
-1. Bump `version` in `package.json`.
-2. Update `CHANGELOG.md` (created as part of this work) with tester-relevant changes.
+1. Bump `version` in `package.json` (propagated into the binary via `-ldflags -X main.version=...`).
+2. Update `CHANGELOG.md` with tester-relevant changes.
 3. Tag: `git tag vX.Y.Z && git push --tags`.
 4. GitHub Actions workflow `.github/workflows/release.yml`:
    - Checks out at the tag.
-   - `npm ci && npm run build`.
-   - Builds and pushes the multi-arch image to GHCR with tags `:vX.Y.Z` and `:latest`.
-   - Creates a GitHub Release and attaches `mydeck-console-vX.Y.Z.tar.gz` (contents of `dist/`).
+   - `npm ci && npm run build` (produces `web/` / `dist/`).
+   - Matrix-builds Go binaries across the supported platforms with the SPA embedded.
+   - Creates a GitHub Release and attaches each platform binary plus `SHA256SUMS`.
+   - Builds and pushes the Docker image (wrapping the linux binaries) to GHCR with tags `:vX.Y.Z` and `:latest`.
    - Auto-generates release notes from commit messages (or pulls from `CHANGELOG.md`).
 
 Version scheme: `v0.x.y` while in tester phase. No stability promises implied.
@@ -111,15 +113,14 @@ Version scheme: `v0.x.y` while in tester phase. No stability promises implied.
 
 ## Repo additions required
 
-- `Dockerfile` — multi-stage: `node:lts-alpine` build → `nginx:alpine` runtime.
-- `docker/nginx.conf.template` — the envsubst-ready config.
-- `docker/entrypoint.sh` — validates `READECK_UPSTREAM`, runs envsubst, execs nginx.
-- `.github/workflows/release.yml` — build + push on tag.
+- `cmd/mydeck-console/main.go` plus the `internal/…` tree per [go-migration.md](go-migration.md).
+- `Dockerfile` — `FROM scratch` (or distroless), copies the prebuilt binary, `ENTRYPOINT ["/mydeck-console"]`. No runtime dependencies.
+- `.github/workflows/release.yml` — build matrix + attach to release + push image.
 - `CHANGELOG.md`.
 - README updates:
-  - "Quick start (Docker)" section.
-  - "Static bundle" section.
-  - "What config lives where" note: env var for proxy target; Settings modal for everything else.
+  - "Quick start (binary)" section.
+  - "Docker alternative" section.
+  - "What config lives where" note: flags/env for the binary's config surface; Settings modal for the Readeck API token.
 
 ---
 

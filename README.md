@@ -49,14 +49,17 @@ The key is injected server-side by the `/brave/` proxy and never enters the SPA 
 
 ### 3. Deployment
 
-See [docs/distribution.md](docs/distribution.md) for the planned tester-friendly distribution paths (Docker image + static bundle). The short version:
+**Current (developer workflow):** nginx-hosted SPA with proxy rules for `/api/`, `/cdx/`, and `/brave/`. Example configs live in `nginx/*.conf.template`. Render to working `.conf` files with `./render-nginx.sh` (reads `.env`), then copy those into your nginx container. The rendered `.conf` files are gitignored.
 
-- The app needs three reverse-proxy rules:
-  - `/api/` → your Readeck instance.
-  - `/cdx/` → `https://web.archive.org/cdx/` (archive.org serves no CORS headers, so the CDX API must be same-origin).
-  - `/brave/` → `https://api.search.brave.com/` with an injected `X-Subscription-Token` header (Brave is also CORS-blocked for browsers, and this keeps the key server-side).
-- Example configs live in `nginx/*.conf.template`. Render to working `.conf` files with `./render-nginx.sh` (reads `.env`), then copy those into your nginx container. The rendered `.conf` files are gitignored.
-- Phase 1 has no server-side state of its own.
+**Planned tester distribution:** a single Go binary with the SPA embedded — no nginx, no `.env` rendering. See [docs/go-migration.md](docs/go-migration.md) for the migration plan and [docs/distribution.md](docs/distribution.md) for the tester-release story that follows it.
+
+Either way, the app needs three reverse-proxy rules:
+
+- `/api/` → your Readeck instance.
+- `/cdx/` → `https://web.archive.org/cdx/` (archive.org serves no CORS headers, so the CDX API must be same-origin).
+- `/brave/` → `https://api.search.brave.com/` with an injected `X-Subscription-Token` header (Brave is also CORS-blocked for browsers, and this keeps the key server-side).
+
+Phase 1 has no server-side state of its own.
 
 ---
 

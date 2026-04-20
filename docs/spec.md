@@ -198,38 +198,34 @@ Runtime requires three proxy passes: `/api/` → Readeck, `/cdx/` → `web.archi
 
 ---
 
-## 11. Phase 2 Enhancements (Roadmap)
+## 11. Phase 2 Roadmap
 
-### 11.1 Go backend
+The original Phase 2 plan — a full Go backend hosting batch orchestration, worker pools, OAuth PKCE, and a rich orchestration layer — has been dropped. Testing showed that batch auto-apply is unrealistic once you accept that per-candidate review is inherent to the repair task. See [go-migration.md](go-migration.md) for the reasoning.
 
-- All external API traffic (Readeck, IA, Brave/SearXNG) flows through the backend.
-- Handles rate limiting centrally (especially IA).
-- Hosts OAuth PKCE dance if we go that route.
+What remains worth considering, in rough priority order:
 
-### 11.2 Advanced HTML Injection
+### 11.1 Single-binary distribution (Go)
 
-Instead of handing an `archive.org` URL to `POST /bookmarks`:
+Replace nginx + SPA-bundle with one `mydeck-console` executable that embeds the Svelte build and hosts the three proxies. Scoped and scheduled in [go-migration.md](go-migration.md). Primary driver: tester onboarding simplicity, not batch throughput.
 
-1. Backend fetches the raw snapshot HTML from IA.
-2. Strips Wayback toolbar / JS injection.
-3. Concurrently downloads inline images.
-4. Uploads a clean `multipart/form-data` payload to Readeck (same shape as the browser extension).
+### 11.2 Advanced HTML Injection (conditional)
 
-Result: the saved bookmark renders like the original article, offline-safe, without Wayback chrome.
+Only worth building if testers report the Wayback-rendered bookmark is unacceptable. If so, the flow is: fetch raw snapshot HTML → strip Wayback chrome → inline images → multipart POST to Readeck (same shape as the browser extension). Fits naturally inside the same binary as §11.1.
 
-### 11.3 Safe batch operations
+### 11.3 SearXNG support (optional)
 
-- `GET /bookmarks/sync?with_json=true` snapshot saved to disk before every batch.
-- Worker pool processes 10–20 bookmarks in parallel.
-- Dry-run mode shows the planned deltas (creates, tags, archives, deletes) before commit.
+User-supplied SearXNG instance URL as an alternative to Brave. Same proxy + scoring pipeline; implementation is minor once the Go shell exists.
 
-### 11.4 Capture Selection
+### 11.4 Capture Selection (speculative)
 
-User highlights text in the Preview iframe → "Capture Selection" posts that HTML fragment to the backend, which wraps and ships it to Readeck. Useful when a live search result's markup is unreadable but a clean excerpt exists.
+User highlights text in the Preview iframe → "Capture Selection" posts that HTML fragment to the binary, which wraps and ships it to Readeck. Useful when a live search result's markup is unreadable but a clean excerpt exists. Worth building only if the problem shows up for real testers.
 
-### 11.5 SearXNG support
+### Deliberately out of scope now
 
-User-supplied SearXNG instance URL; backend proxies the JSON-format query.
+- Worker-pool batch processing.
+- Dry-run batch diffs.
+- Pre-operation backups (if wanted, the SPA can just download the `GET /bookmarks/sync?with_json=true` blob — no backend needed).
+- OAuth 2.0 with PKCE (API tokens remain sufficient for the self-hosted audience).
 
 ---
 
