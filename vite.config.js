@@ -5,6 +5,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const braveKey = env.BRAVE_API_KEY || ''
+  const readeckUpstream = env.READECK_UPSTREAM || 'http://readeck:8000'
 
   return {
     base: process.env.BASE_PATH ? `${process.env.BASE_PATH}/` : '/',
@@ -12,7 +13,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: 'http://eatonmediasvr.local:8888',
+          target: readeckUpstream,
           changeOrigin: true,
           secure: false,
         },

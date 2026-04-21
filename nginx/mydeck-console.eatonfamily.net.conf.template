@@ -1,8 +1,9 @@
-# Production MyDeck Console (Readeck Companion)
-# Render with ./render-nginx.sh (envsubst reads .env).
+# MyDeck Console (Readeck Companion) — nginx example config.
+# Render with ./render-nginx.sh (reads .env for BRAVE_API_KEY and READECK_UPSTREAM).
+# Replace server_name with your own hostname before deploying.
 server {
     listen 80;
-    server_name mydeck-console.eatonfamily.net;
+    server_name mydeck-console.example.com;
 
     # Security headers. Brave and archive.org are reached via our proxies,
     # so they don't need to appear in connect-src.
@@ -12,7 +13,7 @@ server {
 
     # Readeck API proxy — strips CORS by proxying same-origin to internal host.
     location /api/ {
-        proxy_pass http://192.168.0.11:8888/api/;
+        proxy_pass ${READECK_UPSTREAM}/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

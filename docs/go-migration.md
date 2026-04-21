@@ -61,7 +61,7 @@ web/                     # build output symlink or copy target; go:embed reads f
 ```
 mydeck-console \
   --listen :8080 \
-  --readeck-upstream http://192.168.0.11:8888 \
+  --readeck-upstream http://readeck:8000 \
   --brave-key "$BRAVE_API_KEY"
 ```
 

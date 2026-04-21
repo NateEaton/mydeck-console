@@ -33,3 +33,5 @@ nginx/*.conf
 
 # Miscellaneous files
 *repomix-output.xml.txt
+nginx-reload-config.sh
+

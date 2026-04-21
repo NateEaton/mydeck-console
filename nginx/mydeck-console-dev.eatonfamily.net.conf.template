@@ -1,15 +1,18 @@
-# Development environment for MyDeck Console (Readeck Companion)
-# Render with ./render-nginx.sh (envsubst reads .env).
+# MyDeck Console (Readeck Companion) — nginx example, sub-path variant.
+# Use this when the app is mounted at a sub-path (e.g. /mydeck-console-dev/)
+# instead of the server root; match the Vite build's BASE_PATH.
+# Render with ./render-nginx.sh (reads .env for BRAVE_API_KEY and READECK_UPSTREAM).
+# Replace server_name with your own hostname before deploying.
 server {
     listen 80;
-    server_name mydeck-console-dev.eatonfamily.net;
+    server_name mydeck-console-dev.example.com;
 
     # Brave and archive.org are reached via our proxies, not direct from browser.
     add_header Content-Security-Policy "default-src 'self'; connect-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; frame-src *;" always;
 
     # Readeck API proxy — strips CORS by proxying same-origin to internal host.
     location /api/ {
-        proxy_pass http://192.168.0.11:8888/api/;
+        proxy_pass ${READECK_UPSTREAM}/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
