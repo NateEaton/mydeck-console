@@ -1,6 +1,6 @@
 # Go Single-Binary Migration
 
-**Status:** Next up — executes **before** the first tester release and before the Phase 1.5 UX rethink. Rationale: the single-binary shell materially simplifies tester onboarding, and smoke-testing has already given enough confidence in the content-finding flow that UX can be driven ahead rather than crowd-sourced.
+**Status:** Planned — executes **after** the Phase 1.5 UX refactor ([refactor-ui-ux.md](refactor-ui-ux.md)) and **before** the first tester release. The earlier plan put this ahead of the UX work; the pivot was to avoid putting the smoketest shell in front of testers at all. The binary still precedes the tester release because single-file onboarding is a material simplification.
 **Motivation:** Replace the SPA-plus-nginx deployment with a single `mydeck-console` binary that embeds the built frontend and serves it alongside the three upstream proxies. Testers would get one file to download, run, and forget.
 
 This is **not** the original Phase 2 vision (Go backend + batch orchestration). That has been dropped. See [spec.md §11](spec.md#11-phase-2-enhancements-roadmap) — it needs revising; batch auto-apply turned out to be unrealistic once you accept that review is inherent to the repair task.
@@ -106,9 +106,9 @@ All three flags also readable from env (`LISTEN`, `READECK_UPSTREAM`, `BRAVE_API
 
 ## Sequencing
 
-1. **Execute this migration.** Port the three proxies and static serving into a Go binary; retire `nginx/*.conf.template` and `render-nginx.sh`.
-2. **First tester release** off the binary (see [distribution.md](distribution.md), which pivots to binary-as-primary when this lands).
-3. **Phase 1.5 UX rethink in Svelte**, driven by user-as-designer plus tester feedback on content-finding edge cases rather than broader navigation preferences.
+1. **Phase 1.5 UX refactor in Svelte** — design intent in [refactor-ui-ux.md](refactor-ui-ux.md). The smoketest shell is replaced before any tester sees it.
+2. **Execute this migration.** Port the three proxies and static serving into a Go binary; retire `nginx/*.conf.template` and `render-nginx.sh`. Embeds the refactored SPA.
+3. **First tester release** off the binary (see [distribution.md](distribution.md), which pivots to binary-as-primary when this lands).
 4. **Advanced HTML injection** only if tester feedback on the Wayback-rendered bookmark warrants it. It lives in this same binary.
 
-The previous ordering (UX first, testers second, Go third) was reversed because the binary cuts more tester friction than a polished UX does, and the content-finding flow is already stable enough to stand behind without broad UX signal.
+Ordering history: originally Go → testers → UX, then reversed to UX → Go → testers so testers aren't asked to evaluate an intentionally throwaway shell.

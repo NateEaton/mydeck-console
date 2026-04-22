@@ -2,23 +2,93 @@
 
 Top-level working list. Items move to closed issues / commit messages once done.
 
-Working order: **Go migration → first tester release → UX rethink → HTML-injection-if-needed.** See [docs/go-migration.md](docs/go-migration.md) for why this sequence.
+Working order: **UX refactor → Go single-binary → first tester release → conditional follow-ups.** The earlier plan (tester release before UX) was reversed so testers don't see the smoketest shell. See [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md) for UX design intent and [docs/go-migration.md](docs/go-migration.md) for the binary plan.
 
 ---
 
-## Phase 1 — remainders worth landing before the Go migration
+## Phase 1 remainder — verify before the refactor
 
-Small, bounded items that make sense to finish while the nginx-hosted setup is still live so the binary ports a clean frontend, not a half-finished one:
+One bounded item worth closing on the current shell so the refactor isn't debugging two problems at once:
 
-- [ ] Per-repair **disposition control**: let the user choose archive-original vs. delete-original at apply time, with the default read from Settings. Currently hardcoded to archive.
-- [ ] **Disposition default** setting surfaced in the Settings modal.
-- [ ] Confirm **Brave Search** path end-to-end now that the `/brave/` proxy is in place (only archive.org flow has been exercised so far).
+- [ ] Confirm the **Brave Search** path works end-to-end through the `/brave/` proxy. Only the archive.org flow has been exercised; verify the injected `X-Subscription-Token` reaches Brave and results come back before the Bookmark view is rebuilt around both sources.
 
-Everything else (post-apply monitoring, undo, queue filters, etc.) moves into the UX rethink.
+Disposition control and disposition-default-in-Settings are no longer separate remainders — they fold into the UX refactor (specced in `refactor-ui-ux.md` under Settings → General and the Apply flow).
 
 ---
 
-## Go migration — next
+## Phase 1.5 UI/UX refactor — next
+
+Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementation checkboxes, grouped by surface:
+
+### Shell + navigation
+
+- [ ] Top app bar with hamburger menu + left nav drawer.
+- [ ] Drawer items: Triage, Recovered, Replaced, separator, Settings, User Guide, About.
+- [ ] Responsive layout: desktop and mobile (portrait + landscape).
+- [ ] Retire the current three-pane layout in [src/App.svelte](src/App.svelte).
+
+### Triage List
+
+- [ ] Cards match the live MyDeck grid shape: no thumbnail, title + site name, date icons (MDI, from MyDeck Detail dialog), label chips, four inline action icons.
+- [ ] Action icons in order: **Favorite** (dimmed/informational), **Archive** (dimmed/informational), **External Link** (opens original URL in new tab), **Delete**.
+- [ ] Dimmed-icon visual treatment: lower-contrast color, no hover affordance, no cursor change.
+- [ ] Delete-with-Undo snackbar — indefinite duration; commit on any other tap/gesture in the UI; only one pending at a time.
+
+### Bookmark view (replaces today's right-pane tabs)
+
+- [ ] Top app bar: back arrow, title "Bookmark," 3-dot overflow.
+- [ ] Header: title, site name, full URL, created + published dates, favorite/archive state, user-friendly error (404/500/redirect/etc.) derived from Readeck's error reason.
+- [ ] Unified candidate list — archive.org + Brave Search interleaved by confidence.
+- [ ] Per-source skeleton while a source is loading; each source renders as it returns and the list resorts.
+- [ ] Protected "Closest to save date" section at top: closest-before snapshot preferred; closest-after only when no pre-create snapshot exists.
+- [ ] 3-dot overflow menu: Manual URL (dialog), Delete (shared snackbar flow).
+- [ ] Tapping a candidate opens the Preview view (no inline Preview / Open / Apply buttons on candidate cards).
+- [ ] Empty state when both sources return nothing.
+
+### Preview view
+
+- [ ] Top app bar: back, Apply, Delete, Open ↗.
+- [ ] Preview iframe behavior matches today (`{#key previewUrl}` remount, spinner overlay).
+
+### Recovered / Replaced views
+
+- [ ] Read-only list of bookmarks with `recovered-*` labels (Recovered) or `replaced-*` labels (Replaced).
+- [ ] Cards use Triage List shape but no action icons and no tap action.
+- [ ] Add a label-filtered Readeck query path in [src/lib/api/readeck.js](src/lib/api/readeck.js).
+
+### Settings
+
+- [ ] General → **Action on Apply** (Archive default, Delete option). Backs the per-repair disposition chooser in the Apply flow.
+- [ ] General → **App theme**: light / dark / system.
+- [ ] Account dialog: URL + token + Test Connection (today's shape, kept). OAuth deferred.
+
+### Other drawer entries
+
+- [ ] User Guide — markdown rendered client-side from `docs/user-guide.md`.
+- [ ] About — patterned on MyDeck's `AboutScreen`, with console-specific content (version, credits, license, active Readeck server info).
+
+### Scoring rewrite ([src/lib/scoring.js](src/lib/scoring.js))
+
+- [ ] **Archive.org** scoring (0–100): pre-create snapshots preferred; gentle decay with distance to `created` for pre-create, steeper decay for post-create; longevity bonus — snapshot count and span-years among pre-create snapshots lift the closest-to-create candidate's score.
+- [ ] Post-create snapshots only meaningfully scored when no pre-create snapshot exists.
+- [ ] **Brave Search** augmentation on top of current logic: publication-date proximity bonus (exact match strong, within-a-week mild); byline match bonus (when both sides expose author); same-registrable-domain bonus (ditto subdomain migrations like `500px.com` → `iso.500px.com`).
+- [ ] Output 0–100 on both sources so the Bookmark view can merge/interleave.
+- [ ] Tie-break order for interleave: pre-create archive snapshot > Brave result > post-create archive snapshot.
+
+### Behavioral / cross-cutting
+
+- [ ] Detect **already-archived originals** in the Triage payload and surface it in the Bookmark view header + Apply confirmation ("Original is already archived — Apply will add the `replaced-*` label only").
+- [ ] Persist in-flight repair state (selected bookmark, candidates, preview URL) so a page reload doesn't lose context.
+
+### Deferred in this milestone
+
+- Keyboard shortcuts (j/k navigate, p preview, a apply, enter advance).
+- Making Favorite / Archive on cards actionable (informational only in 1.5).
+- In-app Logs view — deferred indefinitely; not worth the UI complexity for a thin client.
+
+---
+
+## Go single-binary migration — after UX refactor
 
 Full plan in [docs/go-migration.md](docs/go-migration.md). Summary checkboxes:
 
@@ -35,7 +105,7 @@ Full plan in [docs/go-migration.md](docs/go-migration.md). Summary checkboxes:
 
 ---
 
-## Tester release
+## Tester release — after Go migration
 
 - [ ] `v0.x.0` tag + release with platform binaries and one-line quick-start.
 - [ ] Optional Docker image wrapping the binary for docker-compose testers (secondary; binary is primary).
@@ -44,55 +114,11 @@ Full plan in [docs/go-migration.md](docs/go-migration.md). Summary checkboxes:
 
 ---
 
-## Phase 1.5 UI/UX rethink — after first tester release
+## Phase 2 residual items
 
-The current three-pane layout + tabs grew organically. Drive this redesign yourself from a workflow-first perspective; use tester feedback to fine-tune the *content-finding* edges (what scoring feels wrong, which edge-case snapshots mislead) rather than to shape the navigation itself. Checklist:
+After the UX refactor, Go migration, and first tester release, the remaining Phase 2 work is small. Context in [docs/spec.md §11](docs/spec.md#11-phase-2-roadmap) and [docs/go-migration.md](docs/go-migration.md).
 
-### Triage queue (list view)
-
-- [ ] **Full metadata visibility** on each card: saved date, published date (when present), author, site host, labels, read progress, favorited, Readeck's own error reason if available.
-- [ ] **Filter and search** the queue: by domain, by label, by date range (saved / published), by presence of a search match, by full-text of title/URL.
-- [ ] Bulk indicators (e.g. "this domain has 47 broken bookmarks — address them together?").
-
-### Selection → cascading repair flow
-
-Instead of parallel tabs, present as ordered steps so the user always knows where they are.
-
-- [ ] **Step 1 — archive.org** is attempted first and displayed prominently.
-  - Results split into "closest to save date" and "all snapshots" (already implemented — keep).
-  - Preview + apply inline without leaving the step.
-- [ ] **Step 2 — manual / assisted search** kicks in as an explicit fallback when archive.org yields nothing usable (no matches, all previews broken, user dismisses).
-  - Brave Search results ranked by confidence.
-  - Paste-a-URL manual entry in the same step.
-  - Both paths converge on the same preview + apply surface.
-- [ ] **Preview** is not a sibling tab — it's the review step for whichever candidate (archive or manual) the user is currently considering.
-
-### Apply
-
-- [ ] Disposition chooser (archive / delete) with the settings default pre-selected, plus a "remember for this session" option.
-- [ ] Explicit confirmation showing the full diff: old URL → new URL, inherited metadata, labels that will be added to each side.
-
-### After apply
-
-- [ ] **Status panel / toast** that tracks the newly created bookmark: "extracting…" → "loaded" (or "errored, click to inspect"). Polls `GET /bookmarks/{newId}` until terminal.
-- [ ] Surface the replacement's own URL / Readeck permalink so the user can click through.
-- [ ] Optional "continue to next in queue" prompt — many testers will process dozens in a session.
-
-### Cross-cutting
-
-- [ ] Keyboard shortcuts for the common path (j/k to navigate queue, p to preview, a to apply, enter to advance).
-- [ ] Persist in-flight repair state so a page reload doesn't lose context.
-- [ ] Decide whether to keep the three-pane layout or move to a more guided single-column flow once a bookmark is selected.
-
-Deliverable: a short `docs/ux-redesign.md` written *before* coding, sketching screens and state transitions. Testers' feedback informs content-finding edges, not the navigation redesign.
-
----
-
-## Phase 2 — residual items
-
-After the migration and first tester release, the remaining Phase 2 work is small. Full context in [docs/spec.md §11](docs/spec.md#11-phase-2-roadmap) and [docs/go-migration.md](docs/go-migration.md).
-
-- [ ] **Advanced HTML injection** — conditional on testers reporting the Wayback-rendered bookmark is unacceptable. Fits inside the existing binary.
+- [ ] **Advanced HTML injection** — conditional on tester feedback that the Wayback-rendered bookmark is unacceptable. Fits inside the existing Go binary.
 - [ ] **SearXNG integration** — user-supplied instance URL, same scoring pipeline as Brave. Small once the Go shell exists.
 - [ ] **Capture Selection** — speculative; build only if the need surfaces during testing.
 

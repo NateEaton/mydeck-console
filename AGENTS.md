@@ -12,11 +12,14 @@ redirects, missing content. It reads and writes against a running Readeck
 instance via the user's API token. The user is a Synology home-lab operator
 self-hosting Readeck in Docker.
 
-Phase 1 (the current shell) is done. The repair workflow — triage queue, archive
-rediscovery, preview, Clone/Replace/Deprecate — works end to end. See
+Phase 1 (the current shell) works end to end — triage queue, archive rediscovery,
+preview, Clone/Replace/Deprecate — but it's a smoketest shell and won't be put
+in front of testers. The next major change is the Phase 1.5 UI/UX refactor
+([docs/refactor-ui-ux.md](docs/refactor-ui-ux.md)), which runs **before** the
+Go single-binary migration and the first tester release. See
 [docs/spec.md](docs/spec.md) for the full Phase 1 spec, [TODO.md](TODO.md) for
 what's outstanding, and [docs/go-migration.md](docs/go-migration.md) for the
-next major change.
+binary work that follows the refactor.
 
 ## Ground rules
 
@@ -137,14 +140,19 @@ is **do not spawn sub-agents**. When they do help:
 - **Bad cases:** tight iterative work, anything where Opus-level reasoning is
   load-bearing, anything that would benefit from seeing the user's reactions.
 
-## What's next (as of 2026-04-20)
+## What's next (as of 2026-04-22)
 
-1. Finish Phase 1 remainders: disposition control UI, disposition default in
-   Settings, Brave end-to-end verification. See [TODO.md](TODO.md).
-2. **Go single-binary migration** — [docs/go-migration.md](docs/go-migration.md).
-   Ordering was deliberately flipped to put this **before** the first tester
-   release because the binary cuts more tester friction than a UX polish pass
-   does.
-3. First tester release off the binary.
-4. Phase 1.5 UX rethink, driven by the user as designer plus tester feedback
-   on content-finding edge cases.
+1. **Phase 1 verification remainder:** confirm Brave Search works end-to-end
+   through the `/brave/` proxy before the refactor. Disposition control and
+   disposition-default-in-Settings have folded into the UX refactor.
+2. **Phase 1.5 UX refactor** — [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md).
+   Shell redesign (hamburger drawer, Bookmark/Preview views, unified candidate
+   list with per-source skeletons, scoring rewrite, Recovered/Replaced views).
+3. **Go single-binary migration** — [docs/go-migration.md](docs/go-migration.md).
+   Embeds the refactored SPA and replaces nginx.
+4. First tester release off the binary.
+5. Conditional follow-ups: advanced HTML injection, SearXNG, capture-selection
+   — only if tester feedback warrants.
+
+Ordering note: the earlier plan was Go → testers → UX. The pivot was to run
+UX first so testers don't see the smoketest shell.

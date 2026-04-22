@@ -161,7 +161,7 @@ Tabs: **Archive.org**, **Preview**, **More ▾** (dropdown to Search / Manual).
 - **More ▾ → Search** — scored Brave results with pill (high/medium/low) and match reason.
 - **More ▾ → Manual** — paste-any-URL input + Apply Manual.
 
-See `docs/ux-redesign.md` (TBD) for the workflow-oriented rethink planned for the next round.
+See [refactor-ui-ux.md](refactor-ui-ux.md) for the Phase 1.5 design intent that supersedes this shell. The refactor now runs before the Go single-binary migration and the first tester release.
 
 ---
 
@@ -202,7 +202,13 @@ Runtime requires three proxy passes: `/api/` → Readeck, `/cdx/` → `web.archi
 
 The original Phase 2 plan — a full Go backend hosting batch orchestration, worker pools, OAuth PKCE, and a rich orchestration layer — has been dropped. Testing showed that batch auto-apply is unrealistic once you accept that per-candidate review is inherent to the repair task. See [go-migration.md](go-migration.md) for the reasoning.
 
+Current working order is **UX refactor → Go single-binary → first tester release → conditional follow-ups.** The UX refactor moved ahead of the binary and the tester release so testers don't see the smoketest shell.
+
 What remains worth considering, in rough priority order:
+
+### 11.0 Phase 1.5 UI/UX refactor
+
+Shell redesign specced in [refactor-ui-ux.md](refactor-ui-ux.md): hamburger drawer, dedicated Bookmark / Preview views, unified candidate list (archive.org + Brave interleaved by confidence), scoring rewrite, Recovered / Replaced read-only views, theme/disposition settings. The Clone/Replace/Deprecate workflow and label taxonomy are unchanged.
 
 ### 11.1 Single-binary distribution (Go)
 
