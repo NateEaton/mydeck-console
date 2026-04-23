@@ -4,6 +4,8 @@
  * @property {string} url
  * @property {string} description
  * @property {string} hostname
+ * @property {string} [pubDate]
+ * @property {string} [author]
  */
 
 export class BraveClient {
@@ -38,11 +40,35 @@ export class BraveClient {
         }
 
         const data = await response.json();
-        return (data?.web?.results ?? []).map(r => ({
-            title: r.title,
-            url: r.url,
-            description: r.description,
-            hostname: r.meta_url?.hostname
-        }));
+        return (data?.web?.results ?? []).map(r => {
+            /** @type {BraveCandidate} */
+            const candidate = {
+                title: r.title,
+                url: r.url,
+                description: r.description,
+                hostname: r.meta_url?.hostname
+            };
+
+            // Brave returns an ISO timestamp on `page_age`; article-type results may carry `article.date` instead.
+            const pubDate = typeof r.page_age === 'string'
+                ? r.page_age
+                : (typeof r.article?.date === 'string' ? r.article.date : undefined);
+            if (pubDate) candidate.pubDate = pubDate;
+
+            // Brave buries author under `article.author`, typically an array of `{ name }` objects.
+            const rawAuthor = r.article?.author;
+            let author;
+            if (Array.isArray(rawAuthor)) {
+                const names = rawAuthor
+                    .map(a => (a && typeof a.name === 'string') ? a.name : (typeof a === 'string' ? a : null))
+                    .filter(n => typeof n === 'string' && n.length > 0);
+                if (names.length) author = names.join(', ');
+            } else if (typeof rawAuthor === 'string' && rawAuthor.length > 0) {
+                author = rawAuthor;
+            }
+            if (author) candidate.author = author;
+
+            return candidate;
+        });
     }
 }
