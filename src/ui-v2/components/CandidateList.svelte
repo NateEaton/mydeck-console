@@ -8,7 +8,7 @@
   export let archiveLoading = false;
   export let braveLoading = false;
   export let archiveError = null;  // { rateLimited, message } | null
-  export let braveSuppressed = false;  // e.g. no Brave key configured
+  export let braveError = null;    // { message } | null
 
   const dispatch = createEventDispatcher();
 
@@ -20,8 +20,12 @@
     dispatch('retry-archive');
   }
 
+  function retryBrave() {
+    dispatch('retry-brave');
+  }
+
   $: allDone = !archiveLoading && !braveLoading;
-  $: empty = allDone && closest.length === 0 && interleaved.length === 0 && !archiveError;
+  $: empty = allDone && closest.length === 0 && interleaved.length === 0 && !archiveError && !braveError;
 </script>
 
 <div class="candidate-list">
@@ -35,7 +39,7 @@
       {/each}
     {/if}
 
-    {#if interleaved.length > 0 || archiveLoading || braveLoading || archiveError}
+    {#if interleaved.length > 0 || archiveLoading || braveLoading || archiveError || braveError}
       <h3 class="section-head">Results</h3>
 
       {#if archiveError}
@@ -58,7 +62,18 @@
         </div>
       {/if}
 
-      {#if braveLoading && !braveSuppressed}
+      {#if braveError}
+        <div class="notice-state">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d={MdiAlert} fill="currentColor" />
+          </svg>
+          <div class="notice-body">
+            <strong>Brave Search request failed</strong>
+            <p>{braveError.message}</p>
+            <button class="btn" on:click={retryBrave}>Retry</button>
+          </div>
+        </div>
+      {:else if braveLoading}
         <div class="skeleton">
           <span class="spinner"></span>
           <span>Searching Brave…</span>

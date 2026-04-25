@@ -93,7 +93,7 @@
   let archiveLoading = false;
   let braveLoading = false;
   let archiveError = null;
-  let braveSuppressed = false;
+  let braveError = null;  // { message } | null
 
   let showOverflowMenu = false;
   let showManualDialog = false;
@@ -229,7 +229,7 @@
     archiveLoading = true;
     braveLoading = true;
     archiveError = null;
-    braveSuppressed = false;
+    braveError = null;
 
     archiveClient.findSnapshots(b.url)
       .then(snaps => {
@@ -261,7 +261,7 @@
       .catch(e => {
         if (myToken !== loadToken) return;
         console.error('Brave fetch failed:', e);
-        braveSuppressed = true;
+        braveError = { message: e?.message || 'Brave Search request failed.' };
       })
       .finally(() => {
         if (myToken !== loadToken) return;
@@ -290,6 +290,31 @@
       .finally(() => {
         if (myToken !== loadToken) return;
         archiveLoading = false;
+      });
+  }
+
+  function retryBrave() {
+    if (!selectedBookmark) return;
+    const b = selectedBookmark;
+    const myToken = ++loadToken;
+    braveLoading = true;
+    braveError = null;
+    const query = b.title || b.url;
+    braveClient.search(query, { count: 10 })
+      .then(results => {
+        if (myToken !== loadToken) return;
+        braveScored = results.map(r => {
+          const s = scoreBraveCandidate(b, r);
+          return { ...r, ...s, source: 'brave' };
+        });
+      })
+      .catch(e => {
+        if (myToken !== loadToken) return;
+        braveError = { message: e?.message || 'Brave Search request failed.' };
+      })
+      .finally(() => {
+        if (myToken !== loadToken) return;
+        braveLoading = false;
       });
   }
 
@@ -657,10 +682,11 @@
           {archiveLoading}
           {braveLoading}
           {archiveError}
-          {braveSuppressed}
+          {braveError}
           {errorClass}
           on:select-candidate={onSelectCandidate}
           on:retry-archive={retryArchive}
+          on:retry-brave={retryBrave}
         />
       {:else if !apiToken}
         <SignInView

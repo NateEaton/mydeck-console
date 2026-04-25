@@ -10,7 +10,7 @@ Working order: **UX refactor → Go single-binary → first tester release → c
 
 One bounded item worth closing on the current shell so the refactor isn't debugging two problems at once:
 
-- [ ] Confirm the **Brave Search** path works end-to-end through the `/brave/` proxy. Only the archive.org flow has been exercised; verify the injected `X-Subscription-Token` reaches Brave and results come back before the Bookmark view is rebuilt around both sources.
+- [x] Confirm the **Brave Search** path works end-to-end through the `/brave/` proxy. Verified: `X-Subscription-Token` reaches Brave, results come back, scored, and interleave with Archive.org snapshots in the Bookmark view.
 
 Disposition control and disposition-default-in-Settings are no longer separate remainders — they fold into the UX refactor (specced in `refactor-ui-ux.md` under Settings → General and the Apply flow).
 

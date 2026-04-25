@@ -14,7 +14,7 @@
   export let archiveLoading = false;
   export let braveLoading = false;
   export let archiveError = null;
-  export let braveSuppressed = false;
+  export let braveError = null;
   export let errorClass = null;  // ClassifiedError | null
 
   const dispatch = createEventDispatcher();
@@ -105,9 +105,10 @@
     {archiveLoading}
     {braveLoading}
     {archiveError}
-    {braveSuppressed}
+    {braveError}
     on:select={(e) => dispatch('select-candidate', e.detail)}
     on:retry-archive={() => dispatch('retry-archive')}
+    on:retry-brave={() => dispatch('retry-brave')}
   />
 </div>
 
