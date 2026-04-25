@@ -33,6 +33,9 @@
   import LogViewerDialog from './components/LogViewerDialog.svelte';
   import SignInView from './components/SignInView.svelte';
   import SettingsView from './components/SettingsView.svelte';
+  import RecoveredView from './components/RecoveredView.svelte';
+  import ReplacedView from './components/ReplacedView.svelte';
+  import IgnoredView from './components/IgnoredView.svelte';
 
   import {
     MdiDotsVertical,
@@ -533,6 +536,14 @@
     outsideHandler = null;
   }
 
+  async function onUnignored() {
+    ignoredIds = await getIgnoredIds();
+  }
+
+  async function onUnignoredAll() {
+    ignoredIds = await getIgnoredIds();
+  }
+
   async function processOAuthCallback() {
     const result = await handleCallback();
     if (!result) return;
@@ -708,6 +719,16 @@
           scope={tokenScope}
           signedIn={!!apiToken}
           on:sign-out={onSignOut}
+        />
+      {:else if activeView === 'recovered'}
+        <RecoveredView {client} />
+      {:else if activeView === 'replaced'}
+        <ReplacedView {client} />
+      {:else if activeView === 'ignored'}
+        <IgnoredView
+          {client}
+          on:unignored={onUnignored}
+          on:unignored-all={onUnignoredAll}
         />
       {:else}
         <div class="coming-soon">

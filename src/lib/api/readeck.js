@@ -137,6 +137,70 @@ export class ReadeckClient {
     }
 
     /**
+     * Fetches bookmarks matching any of the given labels (union). Paginates like getBrokenBookmarks.
+     * @param {string[]} labels
+     * @param {{ is_archived?: boolean }} [options]
+     * @returns {Promise<ReadeckBookmark[]>}
+     */
+    async getBookmarksByLabels(labels, options = {}) {
+        const perLabel = await Promise.all(labels.map(async (label) => {
+            const all = [];
+            let offset = 0;
+            let archivedParam = '';
+            if (options.is_archived === true) archivedParam = '&is_archived=true';
+            else if (options.is_archived === false) archivedParam = '&is_archived=false';
+            while (true) {
+                const res = await this._fetch(
+                    `/api/bookmarks?labels=${encodeURIComponent(label)}&limit=${PAGE_LIMIT}&offset=${offset}${archivedParam}`
+                );
+                const page = await res.json();
+                if (!Array.isArray(page) || page.length === 0) break;
+                all.push(...page);
+                const total = Number(res.headers.get('Total-Count') ?? res.headers.get('total-count'));
+                if (Number.isFinite(total) && all.length >= total) break;
+                if (page.length < PAGE_LIMIT) break;
+                offset += PAGE_LIMIT;
+                if (offset > 100_000) break;
+            }
+            return all;
+        }));
+
+        const map = new Map();
+        for (const list of perLabel) {
+            for (const b of list) {
+                map.set(b.id, b);
+            }
+        }
+        return Array.from(map.values());
+    }
+
+    /**
+     * Fetches multiple bookmarks by ID in parallel (concurrency capped at 6).
+     * 404s are silently dropped; other errors propagate.
+     * @param {string[]} ids
+     * @returns {Promise<ReadeckBookmark[]>}
+     */
+    async getBookmarksByIds(ids) {
+        const CONCURRENCY = 6;
+        const results = [];
+        for (let i = 0; i < ids.length; i += CONCURRENCY) {
+            const chunk = ids.slice(i, i + CONCURRENCY);
+            const settled = await Promise.allSettled(
+                chunk.map(id => this.getBookmark(id))
+            );
+            for (const outcome of settled) {
+                if (outcome.status === 'fulfilled' && outcome.value) {
+                    results.push(outcome.value);
+                } else if (outcome.status === 'rejected') {
+                    const msg = outcome.reason?.message || '';
+                    if (!msg.includes('404')) throw outcome.reason;
+                }
+            }
+        }
+        return results;
+    }
+
+    /**
      * Repairs a bookmark by cloning metadata to a new URL and deprecating the old one.
      *
      * Readeck's POST /bookmarks is async (202 Accepted + server-side fetch). PATCHing labels

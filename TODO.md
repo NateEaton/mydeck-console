@@ -52,7 +52,7 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 
 ### Recovered / Replaced views
 
-- [ ] Read-only list of bookmarks with `recovered-*` labels (Recovered) or `replaced-*` labels (Replaced).
+- [x] Read-only list of bookmarks with `recovered-*` labels (Recovered) or `replaced-*` labels (Replaced). ([src/ui-v2/components/RecoveredView.svelte](src/ui-v2/components/RecoveredView.svelte), [src/ui-v2/components/ReplacedView.svelte](src/ui-v2/components/ReplacedView.svelte))
 - [ ] Cards use Triage List shape but no action icons and no tap action.
 - [ ] Add a label-filtered Readeck query path in [src/lib/api/readeck.js](src/lib/api/readeck.js).
 
@@ -60,8 +60,9 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 
 - [ ] General → **Action on Apply** (Archive default, Delete option). Backs the per-repair disposition chooser in the Apply flow.
 - [ ] General → **App theme**: light / dark / system.
+- [ ] General → **Brave Search API key** — per-user key entered in Settings instead of (or as override for) the deploy-time `.env` value. The `/brave/` proxy is still required for CORS bypass; only the `X-Subscription-Token` source moves from server to browser. Implementation sketch: nginx `map` directive to fall back to `${BRAVE_API_KEY}` env when the browser sends no header (preserves backward compat); same fallback in vite dev proxy; BraveClient takes an `apiKey` ctor arg; SettingsView field with Save / Test / Clear; `localStorage['brave_api_key']`. When neither browser nor server has a key, suppress Brave gracefully (one-time hint) instead of erroring per bookmark. Bundle this with the other General Settings work above. Aligns well with Phase 2 distribution (per-user keys, no shared deployment quota).
 - [x] Account dialog: OAuth 2.0 Authorization Code Flow with PKCE — sign-in, signed-in state with server URL + scopes, sign-out with best-effort token revoke. ([src/lib/api/oauth.js](src/lib/api/oauth.js), [src/ui-v2/components/SignInView.svelte](src/ui-v2/components/SignInView.svelte), [src/ui-v2/components/SettingsView.svelte](src/ui-v2/components/SettingsView.svelte))
-- [ ] **Ignored bookmarks** — list of bookmarks hidden via the eye-off "Ignore (keep as-is)" action, with per-item un-ignore and a "Clear all ignored" option. Ignored IDs are stored in IndexedDB `meta['ignored']`; no un-ignore UI exists yet.
+- [x] **Ignored bookmarks** — list of bookmarks hidden via the eye-off "Ignore (keep as-is)" action, with per-item un-ignore and a "Clear all ignored" option. Ignored IDs are stored in IndexedDB `meta['ignored']`. ([src/ui-v2/components/IgnoredView.svelte](src/ui-v2/components/IgnoredView.svelte))
 
 ### Other drawer entries
 

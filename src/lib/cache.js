@@ -179,6 +179,11 @@ export async function unignoreBookmark(id) {
 }
 
 /** @returns {Promise<void>} */
+export async function unignoreAll() {
+  await setMeta('ignored', []);
+}
+
+/** @returns {Promise<void>} */
 export async function clearAll() {
   const db = await openDB();
   const t = db.transaction(['bookmarks', 'meta'], 'readwrite');
