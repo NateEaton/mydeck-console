@@ -121,6 +121,22 @@ export class ReadeckClient {
     }
 
     /**
+     * Fetch the plain-text extraction log for a bookmark. Source lives in
+     * `bookmark.resources.log.src` — may be an absolute URL or a path. We
+     * coerce either to a same-origin path so it rides the /api/ proxy and
+     * carries the Bearer token.
+     * @param {{ resources?: { log?: { src?: string } } }} bookmark
+     * @returns {Promise<string>}
+     */
+    async fetchExtractionLog(bookmark) {
+        const src = bookmark?.resources?.log?.src;
+        if (!src) return '';
+        const path = toApiPath(src);
+        const res = await this._fetch(path);
+        return res.text();
+    }
+
+    /**
      * Repairs a bookmark by cloning metadata to a new URL and deprecating the old one.
      *
      * Readeck's POST /bookmarks is async (202 Accepted + server-side fetch). PATCHing labels
@@ -172,5 +188,14 @@ export class ReadeckClient {
         }
 
         return replacement;
+    }
+}
+
+function toApiPath(src) {
+    try {
+        const u = new URL(src);
+        return u.pathname + u.search;
+    } catch {
+        return src.startsWith('/') ? src : `/${src}`;
     }
 }

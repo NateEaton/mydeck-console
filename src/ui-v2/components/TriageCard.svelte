@@ -48,7 +48,7 @@
   }
 
   function onCard() {
-    // Bookmark view lands in the next increment.
+    dispatch('select', { bookmark });
   }
 </script>
 
@@ -142,6 +142,8 @@
     gap: 8px;
     cursor: pointer;
     transition: background-color 0.15s ease, opacity 0.15s ease;
+    min-width: 0;
+    box-sizing: border-box;
   }
   .card:hover { background: var(--bg-hover); }
   .card.pending {

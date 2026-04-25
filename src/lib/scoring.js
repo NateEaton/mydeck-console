@@ -64,6 +64,53 @@ function registrableDomain(hostname) {
 }
 
 /**
+ * Normalize a URL for exact-match comparison: lowercase host, drop fragment
+ * and utm_* tracking params, strip trailing slash from non-root paths.
+ * Returns empty string on unparseable input.
+ * @param {string|null|undefined} url
+ * @returns {string}
+ */
+function normalizeUrl(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    u.hash = '';
+    for (const key of [...u.searchParams.keys()]) {
+      if (/^utm_/i.test(key) || key === 'fbclid' || key === 'gclid') {
+        u.searchParams.delete(key);
+      }
+    }
+    let path = u.pathname;
+    if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+    u.pathname = path;
+    return `${u.protocol}//${u.hostname.toLowerCase()}${u.pathname}${u.search}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Extract the terminal path segment (the "slug"), stripped of common article
+ * extensions and URL-decoded. Empty string for site-root URLs.
+ * @param {string|null|undefined} url
+ * @returns {string}
+ */
+function urlSlug(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split('/').filter(Boolean);
+    if (parts.length === 0) return '';
+    let slug = parts[parts.length - 1];
+    try { slug = decodeURIComponent(slug); } catch { /* leave encoded */ }
+    slug = slug.toLowerCase().replace(/\.(html?|php)$/i, '');
+    return slug;
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Parse a 14-char archive timestamp (YYYYMMDDhhmmss) to a Date.
  * @param {string} ts
  * @returns {Date|null}
@@ -145,6 +192,25 @@ export function scoreBraveCandidate(original, candidate) {
     const origReg   = registrableDomain(origHost);
     const candReg   = registrableDomain(candHost);
     const sameReg   = !!(origReg && candReg && origReg === candReg);
+    const origSlug  = urlSlug(original?.url);
+    const candSlug  = urlSlug(candidate?.url);
+    const sameSlug  = !!(origSlug && candSlug && origSlug === candSlug);
+    const origNormUrl = normalizeUrl(original?.url);
+    const candNormUrl = normalizeUrl(candidate?.url);
+    const urlExact  = !!(origNormUrl && candNormUrl && origNormUrl === candNormUrl);
+
+    // URL-structural signals dominate when present: they describe the actual
+    // resource identity, independent of how Brave rendered the title.
+    if (urlExact) {
+      return { score: 99, reason: 'Exact URL match', tier: tierFor(99) };
+    }
+    if (sameHost && sameSlug) {
+      return { score: 93, reason: 'Moved within site (same slug)', tier: tierFor(93) };
+    }
+    if (sameReg && !sameHost && sameSlug) {
+      return { score: 90, reason: 'Same article at new subdomain', tier: tierFor(90) };
+    }
+
     const sim       = titleSimilarity(origTitle, candTitle);
     const exactMatch = origTitle.length > 0 && origTitle === candTitle;
 
@@ -158,7 +224,10 @@ export function scoreBraveCandidate(original, candidate) {
 
     const bonuses = [];
 
-    if (!sameHost && sameReg) {
+    if (!sameHost && !sameReg && sameSlug) {
+      score += 10;
+      bonuses.push('matching slug');
+    } else if (!sameHost && sameReg) {
       score += 8;
       bonuses.push('same site');
     }

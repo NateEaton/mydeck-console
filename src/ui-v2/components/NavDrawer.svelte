@@ -4,6 +4,7 @@
     MdiAlert,
     MdiCheckCircle,
     MdiSwapHorizontal,
+    MdiEyeOff,
     MdiCog,
     MdiHelpCircle,
     MdiInfo,
@@ -19,6 +20,7 @@
     { key: 'triage',    label: 'Triage',     icon: MdiAlert },
     { key: 'recovered', label: 'Recovered',  icon: MdiCheckCircle },
     { key: 'replaced',  label: 'Replaced',   icon: MdiSwapHorizontal },
+    { key: 'ignored',   label: 'Ignored',    icon: MdiEyeOff },
   ];
   const footerItems = [
     { key: 'settings',  label: 'Settings',   icon: MdiCog },

@@ -61,6 +61,7 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 - [ ] General → **Action on Apply** (Archive default, Delete option). Backs the per-repair disposition chooser in the Apply flow.
 - [ ] General → **App theme**: light / dark / system.
 - [ ] Account dialog: URL + token + Test Connection (today's shape, kept). OAuth deferred.
+- [ ] **Ignored bookmarks** — list of bookmarks hidden via the eye-off "Ignore (keep as-is)" action, with per-item un-ignore and a "Clear all ignored" option. Ignored IDs are stored in IndexedDB `meta['ignored']`; no un-ignore UI exists yet.
 
 ### Other drawer entries
 

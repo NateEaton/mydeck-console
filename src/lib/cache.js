@@ -150,6 +150,34 @@ export async function setMeta(key, value) {
   return promisify(store.put({ key, value }));
 }
 
+/** @returns {Promise<Set<string>>} */
+export async function getIgnoredIds() {
+  const ids = (await getMeta('ignored')) ?? [];
+  return new Set(ids);
+}
+
+/**
+ * @param {string} id
+ * @returns {Promise<void>}
+ */
+export async function ignoreBookmark(id) {
+  const ids = (await getMeta('ignored')) ?? [];
+  const set = new Set(ids);
+  set.add(id);
+  await setMeta('ignored', [...set]);
+}
+
+/**
+ * @param {string} id
+ * @returns {Promise<void>}
+ */
+export async function unignoreBookmark(id) {
+  const ids = (await getMeta('ignored')) ?? [];
+  const set = new Set(ids);
+  set.delete(id);
+  await setMeta('ignored', [...set]);
+}
+
 /** @returns {Promise<void>} */
 export async function clearAll() {
   const db = await openDB();

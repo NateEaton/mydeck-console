@@ -11,6 +11,10 @@
   function onDelete(event) {
     dispatch('delete', event.detail);
   }
+
+  function onSelect(event) {
+    dispatch('select', event.detail);
+  }
 </script>
 
 <div class="list-wrap">
@@ -25,6 +29,7 @@
           bookmark={b}
           pendingDelete={pendingDeleteId === b.id}
           on:delete={onDelete}
+          on:select={onSelect}
         />
       {/each}
     </div>
@@ -33,15 +38,18 @@
 
 <style>
   .list-wrap {
+    width: 100%;
     max-width: 720px;
     margin: 0 auto;
     padding: 16px;
     box-sizing: border-box;
+    min-width: 0;
   }
   .list {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-width: 0;
   }
   .empty {
     padding: 48px 16px;
