@@ -60,14 +60,14 @@ Because Readeck enforces URL immutability once a bookmark is saved, the system u
 
 ### Phase 1 — Personal Access Token
 
-- User enters their Readeck server URL and API token into the in-app Settings modal.
-- Stored in `localStorage`. No server-side state.
-- Settings modal also provides a Test Connection button that hits `GET /api/profile`.
-
-### Phase 2 — OAuth 2.0 with PKCE (optional)
-
-- Makes public distribution friendlier.
-- Scopes: `bookmarks:read`, `bookmarks:write`.
+OAuth 2.0 Authorization Code Flow with PKCE (RFC 7636) over Readeck's
+Dynamic Client Registration endpoint (RFC 7591). User enters their Readeck
+server URL on the Sign-in screen; the SPA registers an ephemeral client,
+redirects to `<server>/authorize`, exchanges the returned code at
+`/api/oauth/token`, and persists the access token in `localStorage`.
+Sign-out best-effort revokes the token. Tokens are long-lived; no refresh
+flow is needed. Scopes requested: `bookmarks:read bookmarks:write
+profile:read`.
 
 ---
 
@@ -200,7 +200,7 @@ Runtime requires three proxy passes: `/api/` → Readeck, `/cdx/` → `web.archi
 
 ## 11. Phase 2 Roadmap
 
-The original Phase 2 plan — a full Go backend hosting batch orchestration, worker pools, OAuth PKCE, and a rich orchestration layer — has been dropped. Testing showed that batch auto-apply is unrealistic once you accept that per-candidate review is inherent to the repair task. See [go-migration.md](go-migration.md) for the reasoning.
+The original Phase 2 plan — a full Go backend hosting batch orchestration, worker pools, and a rich orchestration layer — has been dropped. Testing showed that batch auto-apply is unrealistic once you accept that per-candidate review is inherent to the repair task. See [go-migration.md](go-migration.md) for the reasoning. (OAuth with PKCE was originally on this dropped list as well, but turned out to be small enough to land in Phase 1.5 — see §4.)
 
 Current working order is **UX refactor → Go single-binary → first tester release → conditional follow-ups.** The UX refactor moved ahead of the binary and the tester release so testers don't see the smoketest shell.
 
@@ -231,12 +231,10 @@ User highlights text in the Preview iframe → "Capture Selection" posts that HT
 - Worker-pool batch processing.
 - Dry-run batch diffs.
 - Pre-operation backups (if wanted, the SPA can just download the `GET /bookmarks/sync?with_json=true` blob — no backend needed).
-- OAuth 2.0 with PKCE (API tokens remain sufficient for the self-hosted audience).
 
 ---
 
 ## 12. Open Questions
 
-- Auth model for Phase 2 distribution — OAuth vs. continue with pasted API tokens.
 - Should the app bundle a Brave API key for testers, or require BYO? (Leaning BYO.)
 - Do we want a server-side "repair history" log in Phase 2, or is the label taxonomy sufficient audit trail?

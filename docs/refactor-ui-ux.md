@@ -145,8 +145,19 @@ Modeled on MyDeck's `SettingsScreen`.
 
 ### Account
 
-- **Phase 1:** dialog for Readeck server URL + API token + Test Connection (today's shape, kept).
-- **Post-OAuth:** pattern after MyDeck's `AccountSettingsScreen` — device-authorization flow. Separate milestone; out of scope for this refactor.
+OAuth 2.0 Authorization Code Flow with PKCE — RFC 7636 + RFC 7591 (Dynamic
+Client Registration). User enters their Readeck server URL, the SPA registers
+an ephemeral client, redirects to `<server>/authorize`, exchanges the returned
+code for an access token at `/api/oauth/token`, and stores it in
+`localStorage`. Sign-out best-effort revokes the token via
+`POST /api/profile/tokens/{id}/delete`. Tokens are long-lived (no
+`expires_in` / `refresh_token`); re-authentication only happens on explicit
+sign-out or when a token is server-side revoked. Scopes requested:
+`bookmarks:read bookmarks:write profile:read`.
+
+The earlier "Phase 1 = pasted personal access token, OAuth deferred" plan was
+reversed once we read the OpenAPI spec — Readeck's PKCE flow is small (~250
+LOC client-side) and replaces, rather than adds to, the token-paste UI.
 
 ### General
 

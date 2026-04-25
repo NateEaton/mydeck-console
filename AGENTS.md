@@ -65,12 +65,16 @@ only ever speaks to relative paths. Two reasons this matters:
 
 | File / dir                         | Purpose                                               |
 |------------------------------------|-------------------------------------------------------|
-| [src/App.svelte](src/App.svelte)   | Single-component UI: triage, preview, More menu, settings modal |
-| [src/lib/api/readeck.js](src/lib/api/readeck.js) | Readeck client: list, repair (Clone/Replace/Deprecate) |
+| [src/main.js](src/main.js)         | Mounts AppV2 into `#app`. No flags, no v1 fallback. |
+| [src/ui-v2/AppV2.svelte](src/ui-v2/AppV2.svelte) | Drawer + TopAppBar shell; OAuth callback handling, sign in/out, view routing. |
+| [src/ui-v2/components/](src/ui-v2/components/)   | View components: TriageList, BookmarkView, PreviewView, SignInView, SettingsView, NavDrawer, TopAppBar, dialogs. |
+| [src/lib/api/readeck.js](src/lib/api/readeck.js) | Readeck client: list, repair (Clone/Replace/Deprecate). Always same-origin (`/api/...` through proxy). |
+| [src/lib/api/oauth.js](src/lib/api/oauth.js)     | OAuth 2.0 Auth Code Flow + PKCE: client registration, sign-in redirect, callback exchange, revoke. |
 | [src/lib/api/archive.js](src/lib/api/archive.js) | archive.org CDX client + `ArchiveRateLimitError` |
 | [src/lib/api/brave.js](src/lib/api/brave.js)     | Brave Search client (goes through `/brave/` proxy) |
-| [src/lib/cache.js](src/lib/cache.js)             | IndexedDB candidate cache, `CACHE_STALE_MS` gated |
-| [src/lib/scoring.js](src/lib/scoring.js)         | Candidate ranking (archive save-date delta, etc.) |
+| [src/lib/cache.js](src/lib/cache.js)             | IndexedDB candidate cache (`CACHE_STALE_MS` gated) + ignored-bookmark store. |
+| [src/lib/scoring.js](src/lib/scoring.js)         | Candidate ranking: URL-structural fast-path, archive snapshot scoring, Brave augmentation, merge. |
+| [src/lib/readeckErrors.js](src/lib/readeckErrors.js) | Classifier over the extraction-log text → typed error for the BookmarkView header. |
 | [src/lib/config.js](src/lib/config.js)           | Label constants, cache TTL. **No secrets.**          |
 | [vite.config.js](vite.config.js)                 | Dev-server proxy config for `/api`, `/cdx`, `/brave` |
 | [nginx/*.conf.template](nginx/)                  | Prod reverse-proxy templates, rendered by render-nginx.sh |
@@ -109,9 +113,17 @@ Write these down and don't re-discover them:
   add direct fetches to external hosts; add a proxy route.
 - **Svelte 5 in legacy mode.** We use classic reactivity and `on:click`, not
   runes. Don't migrate to runes without discussing.
-- **User credentials stay in `localStorage`.** Readeck URL and API token are
-  entered via the Settings modal and never leave the browser except as an
-  `Authorization` header on `/api/` calls.
+- **Auth is OAuth 2.0 Authorization Code Flow with PKCE.** Sign-in via
+  `SignInView` — user enters Readeck server URL, SPA registers an ephemeral
+  client (RFC 7591), redirects to `<server>/authorize`, exchanges the
+  returned code at `/api/oauth/token`. Access token + token id + scopes live
+  in `localStorage` (`readeck_access_token`, `readeck_token_id`,
+  `readeck_token_scope`); the user-entered server URL lives in `readeck_url`
+  for display only — **never** use it as the API base URL, all `/api/*`
+  calls must go through the same-origin proxy. Sign-out best-effort revokes
+  via `POST /api/profile/tokens/{id}/delete`. Tokens are long-lived (no
+  refresh flow). Legacy `readeck_token` (v1 personal access token) is read
+  as a fallback during migration but cleared on first OAuth sign-in.
 
 ## Common tasks — how to approach them
 
@@ -125,8 +137,9 @@ Write these down and don't re-discover them:
 - **Touch preview behavior.** The iframe remount trick uses Svelte's `{#key}`
   directive. The preview footer is `position: sticky; bottom: 0` with
   `flex-wrap: wrap` so Apply stays visible.
-- **Add settings.** The Settings modal is inside `App.svelte`. Persist via
-  `localStorage`; do not introduce a store library for this.
+- **Add settings.** Settings live in
+  [src/ui-v2/components/SettingsView.svelte](src/ui-v2/components/SettingsView.svelte).
+  Persist via `localStorage`; do not introduce a store library for this.
 
 ## Sub-agents
 

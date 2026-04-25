@@ -99,7 +99,7 @@ All three flags also readable from env (`LISTEN`, `READECK_UPSTREAM`, `BRAVE_API
 
 - The repair workflow. Identical.
 - The label taxonomy. Identical.
-- Auth model. Still a user-pasted Readeck API token stored in the browser. OAuth-with-PKCE is a separate decision and can land later if needed.
+- Auth model. OAuth 2.0 Authorization Code Flow with PKCE — implemented in Phase 1.5 (the UX refactor) and unchanged by the Go migration. Tokens still live in browser `localStorage`; the binary is a static-file server with reverse proxies, not an auth participant.
 - The IA-extraction sidecar question. If the Wayback-rendered-bookmark experience turns out to be unacceptable during testing, the extraction pipeline (fetch snapshot → strip toolbar → inline images → multipart POST to Readeck) becomes a natural second responsibility for this same binary. Adds maybe 300–500 lines of Go, no second process.
 
 ---

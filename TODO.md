@@ -60,7 +60,7 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 
 - [ ] General → **Action on Apply** (Archive default, Delete option). Backs the per-repair disposition chooser in the Apply flow.
 - [ ] General → **App theme**: light / dark / system.
-- [ ] Account dialog: URL + token + Test Connection (today's shape, kept). OAuth deferred.
+- [x] Account dialog: OAuth 2.0 Authorization Code Flow with PKCE — sign-in, signed-in state with server URL + scopes, sign-out with best-effort token revoke. ([src/lib/api/oauth.js](src/lib/api/oauth.js), [src/ui-v2/components/SignInView.svelte](src/ui-v2/components/SignInView.svelte), [src/ui-v2/components/SettingsView.svelte](src/ui-v2/components/SettingsView.svelte))
 - [ ] **Ignored bookmarks** — list of bookmarks hidden via the eye-off "Ignore (keep as-is)" action, with per-item un-ignore and a "Clear all ignored" option. Ignored IDs are stored in IndexedDB `meta['ignored']`; no un-ignore UI exists yet.
 
 ### Other drawer entries
@@ -123,4 +123,4 @@ After the UX refactor, Go migration, and first tester release, the remaining Pha
 - [ ] **SearXNG integration** — user-supplied instance URL, same scoring pipeline as Brave. Small once the Go shell exists.
 - [ ] **Capture Selection** — speculative; build only if the need surfaces during testing.
 
-Dropped: worker-pool batch processing, dry-run batch diffs, OAuth PKCE, server-side repair audit log. The SPA-side `GET /bookmarks/sync?with_json=true` download covers the pre-repair backup case without needing a backend.
+Dropped: worker-pool batch processing, dry-run batch diffs, server-side repair audit log. The SPA-side `GET /bookmarks/sync?with_json=true` download covers the pre-repair backup case without needing a backend. (OAuth PKCE was originally on this list but landed in Phase 1.5 — see Settings → Account.)

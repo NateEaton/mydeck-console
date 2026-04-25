@@ -286,11 +286,7 @@ function stripTrailingSlash(url) {
  * The SPA's own URL (origin + pathname, no query/hash). Same value is
  * registered as redirect_uri and passed to the authorize URL — they
  * must match exactly.
- *
- * NOTE: while the v1 shell still exists behind no flag, we append
- * `?v2=1` so the callback lands on AppV2. After v1 is removed, drop
- * the suffix.
  */
 export function defaultRedirectUri() {
-  return `${window.location.origin}${window.location.pathname}?v2=1`;
+  return `${window.location.origin}${window.location.pathname}`;
 }

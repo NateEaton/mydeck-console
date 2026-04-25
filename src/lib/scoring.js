@@ -267,14 +267,6 @@ export function scoreBraveCandidate(original, candidate) {
 }
 
 /**
- * Back-compat alias: App.svelte still imports `scoreCandidate`.
- * @param {Original} original
- * @param {Candidate} candidate
- * @returns {ScoreResult}
- */
-export const scoreCandidate = scoreBraveCandidate;
-
-/**
  * Score the full archive snapshot set together. Longevity and pre/post
  * counts are set-level facts, so each snapshot's score depends on its
  * peers as well as its own distance from `created`.
@@ -405,19 +397,6 @@ export function scoreArchiveSnapshots(original, snapshots) {
   }
 
   return scored;
-}
-
-/**
- * Stable-sort candidates descending by score, returning a new array.
- * @template {{ score: number }} T
- * @param {T[]} candidates
- * @returns {T[]}
- */
-export function sortByScore(candidates) {
-  if (!Array.isArray(candidates)) return [];
-  return candidates.map((c, i) => ({ c, i }))
-    .sort((a, b) => b.c.score - a.c.score || a.i - b.i)
-    .map(({ c }) => c);
 }
 
 /**

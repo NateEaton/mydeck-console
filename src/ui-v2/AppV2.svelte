@@ -513,7 +513,6 @@
     if (!result) return;
 
     // Strip OAuth params from the URL so a refresh doesn't replay the code.
-    // Preserve `v2=1` so the SPA re-loads back into AppV2.
     const cleanParams = new URLSearchParams(window.location.search);
     for (const k of ['code', 'state', 'error', 'error_description']) cleanParams.delete(k);
     const newSearch = cleanParams.toString();
