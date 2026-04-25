@@ -12,6 +12,7 @@
   import { classifyExtractionLog, classifyBookmarkState } from '../lib/readeckErrors';
   import * as cache from '../lib/cache';
   import { getIgnoredIds, ignoreBookmark } from '../lib/cache';
+  import { handleCallback, revokeToken } from '../lib/api/oauth';
   import {
     CACHE_STALE_MS,
     RECOVERY_LABEL_ARCHIVE,
@@ -30,6 +31,8 @@
   import DeleteSnackbar from './components/DeleteSnackbar.svelte';
   import ManualUrlDialog from './components/ManualUrlDialog.svelte';
   import LogViewerDialog from './components/LogViewerDialog.svelte';
+  import SignInView from './components/SignInView.svelte';
+  import SettingsView from './components/SettingsView.svelte';
 
   import {
     MdiDotsVertical,
@@ -58,9 +61,19 @@
     about:     'About',
   };
 
-  let apiToken = localStorage.getItem('readeck_token') || '';
+  // Auth state — prefer OAuth access token, fall back to legacy v1 personal-access token.
+  let apiToken =
+    localStorage.getItem('readeck_access_token') ||
+    localStorage.getItem('readeck_token') ||
+    '';
+  // serverUrl is informational (display in Settings, used to build the /authorize
+  // redirect during sign-in). All API calls go through the same-origin /api/
+  // reverse proxy — never use serverUrl as ReadeckClient baseUrl.
   let serverUrl = localStorage.getItem('readeck_url') || '';
-  let client = new ReadeckClient(serverUrl, apiToken);
+  let tokenId = localStorage.getItem('readeck_token_id') || '';
+  let tokenScope = localStorage.getItem('readeck_token_scope') || '';
+  let signInError = '';
+  let client = new ReadeckClient('', apiToken);
   const archiveClient = new ArchiveClient();
   const braveClient = new BraveClient();
 
@@ -108,11 +121,12 @@
         : classifyBookmarkState(selectedBookmark))
     : null;
   $: routeMode = selectedCandidate ? 'preview' : (selectedBookmark ? 'bookmark' : 'drawer');
-  $: topBarTitle = routeMode === 'preview' ? 'Preview'
+  $: topBarTitle = !apiToken ? 'Sign in'
+                : routeMode === 'preview' ? 'Preview'
                 : routeMode === 'bookmark' ? 'Bookmark'
                 : (VIEW_TITLES[activeView] || activeView);
   $: showBack = routeMode !== 'drawer';
-  $: showMenu = routeMode === 'drawer' && !isWide;
+  $: showMenu = routeMode === 'drawer' && !isWide && !!apiToken;
 
   function handleResize() {
     isWide = window.innerWidth >= WIDE_MIN;
@@ -343,6 +357,67 @@
     };
   }
 
+  function rebuildClient() {
+    // baseUrl is always empty: the SPA deployment proxies /api/ to Readeck
+    // at the nginx layer. Cross-origin direct calls would hit CORS.
+    client = new ReadeckClient('', apiToken);
+  }
+
+  function persistAuth({ accessToken, id, scope, server }) {
+    apiToken = accessToken;
+    tokenId = id || '';
+    tokenScope = scope || '';
+    serverUrl = server;
+    localStorage.setItem('readeck_access_token', accessToken);
+    if (id) localStorage.setItem('readeck_token_id', id);
+    else localStorage.removeItem('readeck_token_id');
+    if (scope) localStorage.setItem('readeck_token_scope', scope);
+    else localStorage.removeItem('readeck_token_scope');
+    localStorage.setItem('readeck_url', server);
+    // Discard the legacy v1 token if any — OAuth supersedes it.
+    localStorage.removeItem('readeck_token');
+    rebuildClient();
+  }
+
+  function clearAuth() {
+    apiToken = '';
+    tokenId = '';
+    tokenScope = '';
+    localStorage.removeItem('readeck_access_token');
+    localStorage.removeItem('readeck_token_id');
+    localStorage.removeItem('readeck_token_scope');
+    localStorage.removeItem('readeck_token');
+    rebuildClient();
+  }
+
+  function onServerUrlEntered(event) {
+    // SignInView captures the URL pre-redirect so we have it after the round-trip.
+    serverUrl = event.detail.url;
+    localStorage.setItem('readeck_url', serverUrl);
+  }
+
+  async function onSignOut() {
+    const prevToken = apiToken;
+    const prevTokenId = tokenId;
+
+    // Reset UI state immediately.
+    selectedBookmark = null;
+    selectedCandidate = null;
+    bookmarks = [];
+    archiveScored = [];
+    braveScored = [];
+    archiveError = null;
+    activeView = 'triage';
+
+    clearAuth();
+    await cache.clearBookmarks();
+
+    // Best-effort revoke; doesn't block local sign-out.
+    if (prevToken) {
+      revokeToken(prevToken, prevTokenId);
+    }
+  }
+
   async function ignoreAndBack() {
     if (!selectedBookmark) return;
     const id = selectedBookmark.id;
@@ -433,9 +508,46 @@
     outsideHandler = null;
   }
 
+  async function processOAuthCallback() {
+    const result = await handleCallback();
+    if (!result) return;
+
+    // Strip OAuth params from the URL so a refresh doesn't replay the code.
+    // Preserve `v2=1` so the SPA re-loads back into AppV2.
+    const cleanParams = new URLSearchParams(window.location.search);
+    for (const k of ['code', 'state', 'error', 'error_description']) cleanParams.delete(k);
+    const newSearch = cleanParams.toString();
+    const newUrl =
+      window.location.pathname +
+      (newSearch ? `?${newSearch}` : '') +
+      window.location.hash;
+    window.history.replaceState({}, '', newUrl);
+
+    if ('error' in result) {
+      signInError =
+        result.errorDescription ||
+        (result.error === 'access_denied'
+          ? 'Authorization was denied.'
+          : `Sign-in failed (${result.error}).`);
+      return;
+    }
+
+    persistAuth({
+      accessToken: result.accessToken,
+      id: result.tokenId,
+      scope: result.scope,
+      server: result.serverUrl,
+    });
+    signInError = '';
+  }
+
   onMount(async () => {
     window.addEventListener('resize', handleResize);
     ignoredIds = await getIgnoredIds();
+
+    // Consume any OAuth callback before deciding whether we're authenticated.
+    await processOAuthCallback();
+
     if (!apiToken) return;
     const lastSync = await hydrateFromCache();
     const stale = !lastSync || Date.now() - lastSync > CACHE_STALE_MS;
@@ -460,14 +572,14 @@
 <svelte:window on:click={closeOverflow} />
 
 <div class="shell" class:wide={isWide}>
-  {#if isWide}
+  {#if apiToken && isWide}
     <NavDrawer
       variant="permanent"
       active={activeView}
       open={true}
       on:select={onNavSelect}
     />
-  {:else if drawerOpen && routeMode === 'drawer'}
+  {:else if apiToken && drawerOpen && routeMode === 'drawer'}
     <NavDrawer
       variant="modal"
       active={activeView}
@@ -551,20 +663,27 @@
           on:select-candidate={onSelectCandidate}
           on:retry-archive={retryArchive}
         />
+      {:else if !apiToken}
+        <SignInView
+          initialUrl={serverUrl}
+          initialError={signInError}
+          on:server-url={onServerUrlEntered}
+        />
       {:else if activeView === 'triage'}
-        {#if !apiToken}
-          <div class="empty-pad">
-            <p>Configure your Readeck server and API token in the current console (without <code>?v2=1</code>) to get started.</p>
-          </div>
-        {:else}
-          <TriageList
-            bookmarks={sortedBookmarks}
-            loading={loading}
-            pendingDeleteId={pendingDelete?.id ?? null}
-            on:delete={stageDelete}
-            on:select={onSelectBookmark}
-          />
-        {/if}
+        <TriageList
+          bookmarks={sortedBookmarks}
+          loading={loading}
+          pendingDeleteId={pendingDelete?.id ?? null}
+          on:delete={stageDelete}
+          on:select={onSelectBookmark}
+        />
+      {:else if activeView === 'settings'}
+        <SettingsView
+          serverUrl={serverUrl}
+          scope={tokenScope}
+          signedIn={!!apiToken}
+          on:sign-out={onSignOut}
+        />
       {:else}
         <div class="coming-soon">
           <em>{VIEW_TITLES[activeView] || activeView}</em> — coming soon.
@@ -633,21 +752,6 @@
     font-weight: 500;
     color: var(--md-sys-color-on-surface);
   }
-  .empty-pad {
-    padding: 32px;
-    text-align: center;
-    color: var(--md-sys-color-on-surface-variant);
-    max-width: 520px;
-    margin: 0 auto;
-  }
-  .empty-pad code {
-    background: var(--md-sys-color-surface-variant);
-    color: var(--md-sys-color-on-surface-variant);
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 0.85em;
-  }
-
   .bar-icon {
     display: inline-flex;
     align-items: center;
