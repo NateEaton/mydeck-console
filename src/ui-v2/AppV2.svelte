@@ -37,6 +37,8 @@
   import RecoveredView from './components/RecoveredView.svelte';
   import ReplacedView from './components/ReplacedView.svelte';
   import IgnoredView from './components/IgnoredView.svelte';
+  import UserGuideView from './components/UserGuideView.svelte';
+  import AboutView from './components/AboutView.svelte';
 
   import {
     MdiDotsVertical,
@@ -458,6 +460,7 @@
     localStorage.removeItem('readeck_token_id');
     localStorage.removeItem('readeck_token_scope');
     localStorage.removeItem('readeck_token');
+    localStorage.removeItem('readeck_server_info');
     rebuildClient();
   }
 
@@ -776,6 +779,10 @@
           on:unignored={onUnignored}
           on:unignored-all={onUnignoredAll}
         />
+      {:else if activeView === 'guide'}
+        <UserGuideView />
+      {:else if activeView === 'about'}
+        <AboutView {client} {serverUrl} />
       {:else}
         <div class="coming-soon">
           <em>{VIEW_TITLES[activeView] || activeView}</em> — coming soon.

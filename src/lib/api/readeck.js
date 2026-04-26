@@ -50,6 +50,10 @@ export class ReadeckClient {
         return this.request('/api/profile');
     }
 
+    async getInfo() {
+        return this.request('/api/info');
+    }
+
     /**
      * Fetches every broken bookmark by paging through the API.
      * Readeck returns Total-Count / Total-Pages headers; we loop until done.

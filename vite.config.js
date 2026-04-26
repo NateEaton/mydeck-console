@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: process.env.BASE_PATH ? `${process.env.BASE_PATH}/` : '/',
+    define: {
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.0'),
+    },
     plugins: [svelte()],
     server: {
       proxy: {
