@@ -13,6 +13,8 @@
   export let active = 'triage';
   export let variant = 'permanent'; // 'permanent' | 'modal'
   export let open = true;
+  /** @type {{ triage?: number, recovered?: number, replaced?: number, ignored?: number }} */
+  export let counts = {};
 
   const dispatch = createEventDispatcher();
 
@@ -58,7 +60,10 @@
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
           <path d={item.icon} fill="currentColor" />
         </svg>
-        <span>{item.label}</span>
+        <span class="nav-label">{item.label}</span>
+        {#if Number.isFinite(counts[item.key])}
+          <span class="count-pill" class:zero={counts[item.key] === 0}>{counts[item.key]}</span>
+        {/if}
       </button>
     {/each}
 
@@ -73,7 +78,7 @@
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
           <path d={item.icon} fill="currentColor" />
         </svg>
-        <span>{item.label}</span>
+        <span class="nav-label">{item.label}</span>
       </button>
     {/each}
   </nav>
@@ -147,6 +152,29 @@
   }
   .nav-item svg {
     flex-shrink: 0;
+  }
+  .nav-label {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .count-pill {
+    flex-shrink: 0;
+    min-width: 24px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .count-pill.zero {
+    opacity: 0.55;
+  }
+  .nav-item.active .count-pill {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
   }
   .separator {
     height: 1px;

@@ -1,11 +1,27 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { getTheme, setTheme } from '../../lib/theme.js';
 
   export let serverUrl = '';
   export let scope = '';
   export let signedIn = false;
 
   const dispatch = createEventDispatcher();
+
+  const APPLY_KEY = 'apply_disposition';
+
+  let disposition = (localStorage.getItem(APPLY_KEY) === 'delete') ? 'delete' : 'archive';
+  let theme = getTheme();
+
+  function onDispositionChange(value) {
+    disposition = value;
+    localStorage.setItem(APPLY_KEY, value);
+  }
+
+  function onThemeChange(value) {
+    theme = value;
+    setTheme(value);
+  }
 
   function onSignOut() {
     dispatch('sign-out');
@@ -35,9 +51,73 @@
     {/if}
   </div>
 
-  <div class="section coming">
+  <div class="section">
     <h3 class="section-title">General</h3>
-    <p class="muted">Action on Apply, theme, etc. — coming soon.</p>
+
+    <fieldset class="group">
+      <legend>Action on Apply</legend>
+      <p class="help">What happens to the original bookmark after a successful repair.</p>
+      <label class="opt">
+        <input
+          type="radio"
+          name="disposition"
+          value="archive"
+          checked={disposition === 'archive'}
+          on:change={() => onDispositionChange('archive')}
+        />
+        <span class="opt-label">
+          <strong>Archive</strong>
+          <span class="opt-sub">Mark the original archived and add the replaced-* label.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input
+          type="radio"
+          name="disposition"
+          value="delete"
+          checked={disposition === 'delete'}
+          on:change={() => onDispositionChange('delete')}
+        />
+        <span class="opt-label">
+          <strong>Delete</strong>
+          <span class="opt-sub">Remove the original bookmark entirely.</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>App theme</legend>
+      <label class="opt">
+        <input
+          type="radio"
+          name="theme"
+          value="system"
+          checked={theme === 'system'}
+          on:change={() => onThemeChange('system')}
+        />
+        <span class="opt-label"><strong>System</strong></span>
+      </label>
+      <label class="opt">
+        <input
+          type="radio"
+          name="theme"
+          value="light"
+          checked={theme === 'light'}
+          on:change={() => onThemeChange('light')}
+        />
+        <span class="opt-label"><strong>Light</strong></span>
+      </label>
+      <label class="opt">
+        <input
+          type="radio"
+          name="theme"
+          value="dark"
+          checked={theme === 'dark'}
+          on:change={() => onThemeChange('dark')}
+        />
+        <span class="opt-label"><strong>Dark</strong></span>
+      </label>
+    </fieldset>
   </div>
 </div>
 
@@ -104,10 +184,52 @@
     color: var(--error-fg);
     border-color: var(--error-fg);
   }
-  .empty, .muted {
+  .empty {
     margin: 0;
     color: var(--md-sys-color-on-surface-variant);
     font-size: 0.9rem;
   }
-  .coming { opacity: 0.7; }
+
+  .group {
+    border: none;
+    margin: 0 0 18px;
+    padding: 0;
+  }
+  .group:last-child { margin-bottom: 0; }
+  .group legend {
+    padding: 0;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 6px;
+  }
+  .help {
+    margin: 0 0 10px;
+    font-size: 0.82rem;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  .opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 4px;
+    cursor: pointer;
+  }
+  .opt input {
+    margin: 2px 0 0;
+    accent-color: var(--md-sys-color-primary);
+    cursor: pointer;
+  }
+  .opt-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.9rem;
+    color: var(--md-sys-color-on-surface);
+  }
+  .opt-sub {
+    font-size: 0.8rem;
+    color: var(--md-sys-color-on-surface-variant);
+    font-weight: 400;
+  }
 </style>

@@ -43,41 +43,39 @@
   --md-sys-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --md-sys-color-primary: #abc6ff;
-    --md-sys-color-on-primary: #102f5f;
-    --md-sys-color-primary-container: #2c3e5f;
-    --md-sys-color-on-primary-container: #d8e2ff;
+:root.dark {
+  --md-sys-color-primary: #abc6ff;
+  --md-sys-color-on-primary: #102f5f;
+  --md-sys-color-primary-container: #2c3e5f;
+  --md-sys-color-on-primary-container: #d8e2ff;
 
-    --md-sys-color-secondary: #c4c6d0;
-    --md-sys-color-on-secondary: #2d3038;
-    --md-sys-color-secondary-container: #43464e;
-    --md-sys-color-on-secondary-container: #e0e2ec;
+  --md-sys-color-secondary: #c4c6d0;
+  --md-sys-color-on-secondary: #2d3038;
+  --md-sys-color-secondary-container: #43464e;
+  --md-sys-color-on-secondary-container: #e0e2ec;
 
-    --md-sys-color-surface: #1a1c1e;
-    --md-sys-color-on-surface: #e3e2e6;
-    --md-sys-color-surface-variant: #44474e;
-    --md-sys-color-on-surface-variant: #c4c6cf;
+  --md-sys-color-surface: #1a1c1e;
+  --md-sys-color-on-surface: #e3e2e6;
+  --md-sys-color-surface-variant: #44474e;
+  --md-sys-color-on-surface-variant: #c4c6cf;
 
-    --md-sys-color-outline: #8e9099;
+  --md-sys-color-outline: #8e9099;
 
-    --bg-list-panel: #202224;
-    --bg-card: #2a2c2e;
-    --bg-modal: #2a2c2e;
-    --bg-preview-warning: #3a3520;
-    --bg-overlay: rgba(0, 0, 0, 0.7);
-    --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-list-panel: #202224;
+  --bg-card: #2a2c2e;
+  --bg-modal: #2a2c2e;
+  --bg-preview-warning: #3a3520;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+  --bg-hover: rgba(255, 255, 255, 0.06);
 
-    --text-muted: #a0a3a8;
-    --text-subtle: #c4c6cf;
+  --text-muted: #a0a3a8;
+  --text-subtle: #c4c6cf;
 
-    --success-fg: #a3d9a5;
-    --error-fg:   #ef9a9a;
-    --pill-green-bg:  #1f3a21;  --pill-green-fg:  #a3d9a5;
-    --pill-yellow-bg: #3d2f0c;  --pill-yellow-fg: #ffd54f;
-    --pill-red-bg:    #3a1a18;  --pill-red-fg:    #ef9a9a;
-  }
+  --success-fg: #a3d9a5;
+  --error-fg:   #ef9a9a;
+  --pill-green-bg:  #1f3a21;  --pill-green-fg:  #a3d9a5;
+  --pill-yellow-bg: #3d2f0c;  --pill-yellow-fg: #ffd54f;
+  --pill-red-bg:    #3a1a18;  --pill-red-fg:    #ef9a9a;
 }
 
 body {

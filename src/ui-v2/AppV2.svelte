@@ -31,6 +31,7 @@
   import DeleteSnackbar from './components/DeleteSnackbar.svelte';
   import ManualUrlDialog from './components/ManualUrlDialog.svelte';
   import LogViewerDialog from './components/LogViewerDialog.svelte';
+  import ApplyConfirmDialog from './components/ApplyConfirmDialog.svelte';
   import SignInView from './components/SignInView.svelte';
   import SettingsView from './components/SettingsView.svelte';
   import RecoveredView from './components/RecoveredView.svelte';
@@ -84,6 +85,10 @@
   let loading = false;
   let activeView = 'triage';
   let ignoredIds = new Set();
+  // Counts shown as pills on the nav drawer. Triage and Ignored are derived
+  // reactively below; Recovered / Replaced are fetched lazily.
+  let recoveredCount = null;
+  let replacedCount = null;
 
   let isWide = typeof window !== 'undefined' ? window.innerWidth >= WIDE_MIN : true;
   let drawerOpen = false;
@@ -101,6 +106,8 @@
   let showOverflowMenu = false;
   let showManualDialog = false;
   let showLogDialog = false;
+  // { newUrl, source } | null while the Apply confirmation dialog is open
+  let pendingApply = null;
 
   let logText = '';
   let logLoading = false;
@@ -118,6 +125,12 @@
   $: sortedBookmarks = [...bookmarks]
     .filter(b => !ignoredIds.has(b.id))
     .sort((a, b) => (Date.parse(b?.created) || 0) - (Date.parse(a?.created) || 0));
+  $: navCounts = {
+    triage: sortedBookmarks.length,
+    recovered: recoveredCount,
+    replaced: replacedCount,
+    ignored: ignoredIds.size,
+  };
   $: errorClass = selectedBookmark
     ? (logText
         ? classifyExtractionLog(logText)
@@ -156,6 +169,25 @@
       console.error(e);
     } finally {
       loading = false;
+    }
+  }
+
+  async function refreshLabelCounts() {
+    if (!apiToken) return;
+    try {
+      const [r, p] = await Promise.all([
+        client.countBookmarksByLabels(
+          [RECOVERY_LABEL_ARCHIVE, RECOVERY_LABEL_SEARCH, RECOVERY_LABEL_MANUAL]
+        ),
+        client.countBookmarksByLabels(
+          [DEPRECATION_LABEL_ARCHIVE, DEPRECATION_LABEL_SEARCH, DEPRECATION_LABEL_MANUAL],
+          { is_archived: true }
+        ),
+      ]);
+      recoveredCount = r;
+      replacedCount = p;
+    } catch (e) {
+      console.warn('label count refresh failed:', e);
     }
   }
 
@@ -321,17 +353,27 @@
       });
   }
 
-  async function applyRepair(newUrl, source) {
+  function requestApplyRepair(newUrl, source) {
     if (!selectedBookmark) return;
-    if (!confirm(`Replace "${selectedBookmark.title || selectedBookmark.url}"?\n\nNew URL: ${newUrl}`)) return;
+    pendingApply = { newUrl, source };
+  }
+
+  function cancelApplyRepair() {
+    pendingApply = null;
+  }
+
+  async function confirmApplyRepair(event) {
+    if (!selectedBookmark || !pendingApply) return;
+    const { newUrl, source } = pendingApply;
+    const disposition = event.detail.disposition;
+    pendingApply = null;
     const { recovery, deprecation } = LABELS_BY_SOURCE[source] ?? LABELS_BY_SOURCE.manual;
-    const deprecateAction = localStorage.getItem('apply_disposition') === 'delete' ? 'delete' : 'archive';
     const bookmarkId = selectedBookmark.id;
     try {
       await client.repairBookmark(bookmarkId, newUrl, {
         recoveryLabel: recovery,
         deprecationLabel: deprecation,
-        deprecateAction,
+        deprecateAction: disposition,
       });
       await cache.deleteBookmark(bookmarkId);
       bookmarks = bookmarks.filter(b => b.id !== bookmarkId);
@@ -339,6 +381,7 @@
       selectedCandidate = null;
       archiveScored = [];
       braveScored = [];
+      refreshLabelCounts();
     } catch (e) {
       alert(`Repair failed: ${e.message}`);
     }
@@ -346,7 +389,7 @@
 
   function applyCurrentCandidate() {
     if (!selectedCandidate) return;
-    applyRepair(selectedCandidate.url, selectedCandidate.source || 'archive');
+    requestApplyRepair(selectedCandidate.url, selectedCandidate.source || 'archive');
   }
 
   function openExternalCurrent() {
@@ -462,7 +505,7 @@
   }
   function onManualApply(event) {
     showManualDialog = false;
-    applyRepair(event.detail.url, 'manual');
+    requestApplyRepair(event.detail.url, 'manual');
   }
   function onManualCancel() {
     showManualDialog = false;
@@ -589,6 +632,7 @@
     if (stale || bookmarks.length === 0) {
       await refresh();
     }
+    refreshLabelCounts();
   });
 
   afterUpdate(() => {
@@ -612,6 +656,7 @@
       variant="permanent"
       active={activeView}
       open={true}
+      counts={navCounts}
       on:select={onNavSelect}
     />
   {:else if apiToken && drawerOpen && routeMode === 'drawer'}
@@ -619,6 +664,7 @@
       variant="modal"
       active={activeView}
       open={drawerOpen}
+      counts={navCounts}
       on:select={onNavSelect}
       on:scrim={onScrim}
     />
@@ -756,6 +802,17 @@
     log={logText}
     loading={logLoading}
     on:close={closeLogDialog}
+  />
+{/if}
+
+{#if pendingApply && selectedBookmark}
+  <ApplyConfirmDialog
+    bookmarkTitle={selectedBookmark.title || selectedBookmark.url}
+    newUrl={pendingApply.newUrl}
+    originalIsArchived={!!selectedBookmark.is_archived}
+    defaultDisposition={localStorage.getItem('apply_disposition') === 'delete' ? 'delete' : 'archive'}
+    on:apply={confirmApplyRepair}
+    on:cancel={cancelApplyRepair}
   />
 {/if}
 

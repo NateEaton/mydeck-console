@@ -201,6 +201,36 @@ export class ReadeckClient {
     }
 
     /**
+     * Returns the total count of bookmarks matching the union of the given
+     * labels. Uses ?limit=1 + Total-Count header per label so it stays cheap
+     * even for large result sets.
+     *
+     * Note: sums per-label counts. If the same bookmark carries multiple of
+     * the labels in `labels`, it is counted multiple times. For mydeck-console
+     * the recovery/deprecation labels are mutually exclusive in practice
+     * (one per repair), so this is fine.
+     *
+     * @param {string[]} labels
+     * @param {{ is_archived?: boolean }} [options]
+     * @returns {Promise<number>}
+     */
+    async countBookmarksByLabels(labels, options = {}) {
+        let archivedParam = '';
+        if (options.is_archived === true) archivedParam = '&is_archived=true';
+        else if (options.is_archived === false) archivedParam = '&is_archived=false';
+        const counts = await Promise.all(labels.map(async (label) => {
+            const res = await this._fetch(
+                `/api/bookmarks?labels=${encodeURIComponent(label)}&limit=1${archivedParam}`
+            );
+            // We only need the headers; consume the body to free the stream.
+            await res.json().catch(() => null);
+            const total = Number(res.headers.get('Total-Count') ?? res.headers.get('total-count'));
+            return Number.isFinite(total) ? total : 0;
+        }));
+        return counts.reduce((a, b) => a + b, 0);
+    }
+
+    /**
      * Repairs a bookmark by cloning metadata to a new URL and deprecating the old one.
      *
      * Readeck's POST /bookmarks is async (202 Accepted + server-side fetch). PATCHing labels
