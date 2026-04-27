@@ -11,30 +11,29 @@ For each broken bookmark, MyDeck Console offers:
 
 When you apply a replacement, MyDeck Console follows Readeck's immutability model: it **clones** the original's metadata onto a new bookmark pointing at the replacement URL, then **deprecates** (archives or deletes) the original. Source-specific labels (`recovered-archive.org`, `replaced-manual`, etc.) make the lineage easy to audit after the fact.
 
-> **Status:** Phase 1 — frontend-only PWA, single-bookmark triage. See [docs/spec.md](docs/spec.md) for the full design and [TODO.md](TODO.md) for what's next.
+> **Status:** Phase 1.5 in progress. The Svelte UI refactor is active and the Go single-binary migration is underway. See [docs/spec.md](docs/spec.md), [docs/go-migration.md](docs/go-migration.md), and [TODO.md](TODO.md) for current scope.
 
 ---
 
 ## Requirements
 
 - A running Readeck instance you control.
-- A Readeck API token (see below).
 - Optional: a Brave Search API key for the search-fallback path.
+- For Go-binary builds: Go 1.22+.
 
 ---
 
 ## Setup
 
-### 1. Generate a Readeck API token
+### 1. Sign in with Readeck OAuth (PKCE)
 
-1. In Readeck, open **Profile → API Tokens** (or `Settings → Tokens`, depending on your version).
-2. Click **Create a new token**.
-3. Grant at least `bookmarks:read` and `bookmarks:write` scopes.
-4. Copy the token — Readeck will not show it again.
+MyDeck Console now uses OAuth 2.0 Authorization Code Flow with PKCE.
 
-Paste the token (and your Readeck server URL) into the **Settings** modal in MyDeck Console. The app stores it in your browser's `localStorage`; nothing is sent anywhere except to your own Readeck instance.
+1. Open the app and go to **Sign in**.
+2. Enter your Readeck server URL.
+3. Complete authorization in Readeck and return to the app.
 
-If you are running MyDeck Console behind the same reverse proxy as Readeck (e.g. the Docker deployment path), you can leave the Server URL blank and it will use the same-origin `/api/` proxy.
+Access token metadata and scope are stored in browser `localStorage`. All API calls still go through same-origin `/api/*`.
 
 ### 2. Optional — Brave Search API key
 
@@ -43,29 +42,29 @@ The Search fallback is powered by [Brave Search API](https://brave.com/search/ap
 1. Sign up at [api.search.brave.com](https://api.search.brave.com/).
 2. Create a subscription on the **Data for Search — Free** plan.
 3. Copy the generated API key.
-4. Put it in your `.env` as `BRAVE_API_KEY=...`. Vite's dev server reads it directly. For prod, run `./render-nginx.sh` to substitute it into the nginx config that ships to the reverse-proxy container (see [Deployment](#3-deployment)).
+4. Put it in your `.env` as `BRAVE_API_KEY=...`. Vite's dev server reads it directly. For Go binary runs, pass `--brave-key` (or set `BRAVE_API_KEY`).
 
 The key is injected server-side by the `/brave/` proxy and never enters the SPA bundle. Without a Brave key the Archive and Manual flows still work; the Search tab surfaces an error when it tries to call a proxy with no token configured.
 
-### 3. Deployment
+### 3. Deployment options
 
-**Current (developer workflow):** nginx-hosted SPA with proxy rules for `/api/`, `/cdx/`, and `/brave/`. Example configs live in `nginx/*.conf.template`. Render to working `.conf` files with `./render-nginx.sh` (reads `.env`), then copy those into your nginx container. The rendered `.conf` files are gitignored.
+**Legacy path (still supported):** nginx-hosted SPA from `dist/` with proxy rules for `/api/`, `/cdx/`, and `/brave/`.
 
-**Planned tester distribution:** a single Go binary with the SPA embedded — no nginx, no `.env` rendering. See [docs/go-migration.md](docs/go-migration.md) for the migration plan and [docs/distribution.md](docs/distribution.md) for the tester-release story that follows it.
+**Go path (in progress, current migration target):** single `mydeck-console` executable embedding SPA assets and handling `/api`, `/cdx`, `/brave` proxy routes directly. See [docs/go-migration.md](docs/go-migration.md).
 
-Either way, the app needs three reverse-proxy rules:
+Both paths require the same logical routes:
 
 - `/api/` → your Readeck instance.
 - `/cdx/` → `https://web.archive.org/cdx/` (archive.org serves no CORS headers, so the CDX API must be same-origin).
 - `/brave/` → `https://api.search.brave.com/` with an injected `X-Subscription-Token` header (Brave is also CORS-blocked for browsers, and this keeps the key server-side).
 
-Phase 1 has no server-side state of its own.
+The app has no server-side state of its own.
 
 ---
 
 ## Using it
 
-1. Open the app, paste your Readeck URL and token into **Settings**, hit **Test Connection**, then **Save & Refresh**.
+1. Open the app and complete OAuth sign-in.
 2. The triage queue loads all bookmarks with `has_errors=true` that are not already archived.
 3. Select a bookmark. The app fetches archive.org snapshots (and Brave results if the `/brave/` proxy is configured) in parallel.
 4. For each archive snapshot, you get three actions:
@@ -77,7 +76,7 @@ Phase 1 has no server-side state of its own.
 
 ---
 
-## Development
+## Development (SPA)
 
 ```
 npm install
@@ -91,6 +90,32 @@ npm run build
 ```
 
 Outputs to `dist/`.
+
+## Development (Go binary)
+
+Build embedded binary via the existing script:
+
+```
+./deploy.sh binary-test
+```
+
+This builds SPA assets, syncs them into `cmd/mydeck-console/web/`, then runs `go build`.
+
+Run binary directly:
+
+```
+./build/mydeck-console --readeck-upstream "http://127.0.0.1:8888" --listen "127.0.0.1:8889"
+```
+
+Optional:
+
+- `--brave-key "$BRAVE_API_KEY"`
+- `--version`
+
+Deploy script modes:
+
+- `./deploy.sh dev|prod|test` (legacy static/nginx flow)
+- `./deploy.sh binary-test|binary-prod` (Go binary flow)
 
 ---
 

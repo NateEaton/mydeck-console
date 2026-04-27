@@ -24,6 +24,8 @@
   let serverInfo = null;
   let serverInfoLoading = false;
   let serverInfoError = false;
+  let serverUser = '';
+  let runtimeMeta = null;
   let appExpanded = false;
   let serverExpanded = false;
   let copyStatus = '';
@@ -88,6 +90,41 @@
     }
   }
 
+  async function loadServerUser() {
+    if (!client) return;
+    try {
+      const profile = await client.getProfile();
+      serverUser = String(
+        profile?.email ||
+        profile?.username ||
+        profile?.name ||
+        profile?.id ||
+        ''
+      );
+    } catch {
+      serverUser = '';
+    }
+  }
+
+  async function loadRuntimeMeta() {
+    try {
+      const res = await fetch('/__mydeck/meta', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || typeof data !== 'object') return;
+      if (!data.runtime) return;
+      runtimeMeta = {
+        runtime: String(data.runtime),
+        version: String(data.version || ''),
+      };
+    } catch {
+      runtimeMeta = null;
+    }
+  }
+
   function setCopyStatus(text) {
     copyStatus = text;
     clearTimeout(copyTimer);
@@ -118,8 +155,10 @@
   }
 
   function appDetailLines() {
+    const runtimeLabel = runtimeMeta?.runtime === 'go-binary' ? 'Go executable' : 'Static web';
     return [
-      `Version: ${APP_VERSION}`,
+      `Web bundle version: ${APP_VERSION}`,
+      `Host runtime: ${runtimeLabel}${runtimeMeta?.version ? ` (${runtimeMeta.version})` : ''}`,
       `Mode: ${import.meta.env.MODE || 'production'}`,
       `Origin: ${window.location.origin}`,
     ];
@@ -136,7 +175,8 @@
     if (!serverInfo) return [];
     const build = serverInfo.build ? serverInfo.build : '(stable release)';
     const lines = [];
-    if (serverUrl) lines.push(`URL: ${serverUrl}`);
+    if (serverUrl) lines.push(`Server URL: ${serverUrl}`);
+    if (serverUser) lines.push(`Signed in as: ${serverUser}`);
     lines.push(`Version: ${serverInfo.canonical}`);
     lines.push(`Release: ${serverInfo.release}`);
     lines.push(`Build: ${build}`);
@@ -146,6 +186,8 @@
 
   onMount(() => {
     loadServerInfo();
+    loadServerUser();
+    loadRuntimeMeta();
     return () => clearTimeout(copyTimer);
   });
 </script>

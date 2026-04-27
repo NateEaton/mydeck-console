@@ -1,0 +1,2 @@
+# Generated build assets are synced here before Go build.
+# Keep this file so the directory exists for go:embed in clean checkouts.
