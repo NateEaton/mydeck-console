@@ -1,6 +1,6 @@
 # Go Single-Binary Migration
 
-**Status:** Planned — executes **after** the Phase 1.5 UX refactor ([refactor-ui-ux.md](refactor-ui-ux.md)) and **before** the first tester release. The earlier plan put this ahead of the UX work; the pivot was to avoid putting the smoketest shell in front of testers at all. The binary still precedes the tester release because single-file onboarding is a material simplification.
+**Status:** In progress — runtime scaffold complete (see `cmd/mydeck-console/`, `internal/`). Remaining: tests, cross-compile, GitHub Actions release workflow, nginx retirement. The full UX build will be embedded before the tester release; individual pieces may be tested earlier via `./deploy.sh binary-dev`.
 **Motivation:** Replace the SPA-plus-nginx deployment with a single `mydeck-console` binary that embeds the built frontend and serves it alongside the three upstream proxies. Testers would get one file to download, run, and forget.
 
 This is **not** the original Phase 2 vision (Go backend + batch orchestration). That has been dropped. See [spec.md §11](spec.md#11-phase-2-enhancements-roadmap) — it needs revising; batch auto-apply turned out to be unrealistic once you accept that review is inherent to the repair task.

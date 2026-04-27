@@ -153,19 +153,17 @@ is **do not spawn sub-agents**. When they do help:
 - **Bad cases:** tight iterative work, anything where Opus-level reasoning is
   load-bearing, anything that would benefit from seeing the user's reactions.
 
-## What's next (as of 2026-04-22)
+## What's next (as of 2026-04-27)
 
-1. **Phase 1 verification remainder:** confirm Brave Search works end-to-end
-   through the `/brave/` proxy before the refactor. Disposition control and
-   disposition-default-in-Settings have folded into the UX refactor.
-2. **Phase 1.5 UX refactor** — [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md).
+1. ~~**Phase 1 verification:** confirm Brave Search works end-to-end.~~ Done.
+2. **Phase 1.5 UX refactor** — [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). **Active.**
    Shell redesign (hamburger drawer, Bookmark/Preview views, unified candidate
    list with per-source skeletons, scoring rewrite, Recovered/Replaced views).
-3. **Go single-binary migration** — [docs/go-migration.md](docs/go-migration.md).
-   Embeds the refactored SPA and replaces nginx.
+   User Guide and About views are done; remaining work is in [TODO.md](TODO.md).
+3. **Go single-binary migration** — [docs/go-migration.md](docs/go-migration.md). **Runtime scaffold done.**
+   `cmd/`, `internal/server`, `internal/proxy`, `internal/config` are implemented.
+   Remaining: tests, cross-compile, GitHub Actions workflow, nginx retirement.
+   The full refactored SPA will be embedded before the tester release.
 4. First tester release off the binary.
 5. Conditional follow-ups: advanced HTML injection, SearXNG, capture-selection
    — only if tester feedback warrants.
-
-Ordering note: the earlier plan was Go → testers → UX. The pivot was to run
-UX first so testers don't see the smoketest shell.

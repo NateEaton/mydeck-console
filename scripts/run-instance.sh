@@ -10,10 +10,17 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Load .env from project root so BRAVE_API_KEY, READECK_UPSTREAM, and BIN_INSTALL_DIR
+# are available without requiring manual shell exports.
+if [[ -f "$ROOT_DIR/.env" ]]; then
+    set -a; source "$ROOT_DIR/.env"; set +a
+fi
+
 INSTANCE="${INSTANCE:-dev}"
-APP_BIN="${APP_BIN:-$ROOT_DIR/build/mydeck-console}"
+_bin_default="${BIN_INSTALL_DIR:+$BIN_INSTALL_DIR/mydeck-console}"
+APP_BIN="${APP_BIN:-${_bin_default:-$ROOT_DIR/build/mydeck-console}}"
 APP_LISTEN="${APP_LISTEN:-127.0.0.1:8889}"
-APP_UPSTREAM="${APP_UPSTREAM:-http://127.0.0.1:8888}"
+APP_UPSTREAM="${APP_UPSTREAM:-${READECK_UPSTREAM:-http://127.0.0.1:8888}}"
 APP_BRAVE_KEY="${APP_BRAVE_KEY:-${BRAVE_API_KEY:-}}"
 RUN_DIR="${RUN_DIR:-$ROOT_DIR/run}"
 LOG_DIR="${LOG_DIR:-$ROOT_DIR/logs}"

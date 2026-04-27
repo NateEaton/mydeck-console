@@ -93,29 +93,58 @@ Outputs to `dist/`.
 
 ## Development (Go binary)
 
-Build embedded binary via the existing script:
+Build embedded binary (dev SPA build, fast iteration):
 
 ```
-./deploy.sh binary-test
+./deploy.sh binary-dev
 ```
 
-This builds SPA assets, syncs them into `cmd/mydeck-console/web/`, then runs `go build`.
+This builds SPA assets into `cmd/mydeck-console/web/` then runs `go build`. The binary lands at `./build/mydeck-console`.
 
-Run binary directly:
+Start/stop via the scripts (reads `BRAVE_API_KEY` and `READECK_UPSTREAM` from `.env` automatically):
 
 ```
-./build/mydeck-console --readeck-upstream "http://127.0.0.1:8888" --listen "127.0.0.1:8889"
+./scripts/start-dev.sh    # listens on 127.0.0.1:8889
+./scripts/stop-dev.sh
+./scripts/status-dev.sh
 ```
 
-Optional:
+Or run directly with explicit flags:
 
-- `--brave-key "$BRAVE_API_KEY"`
-- `--version`
+```
+./build/mydeck-console \
+  --readeck-upstream "http://192.168.0.11:8080" \
+  --listen "127.0.0.1:8889" \
+  --brave-key "$BRAVE_API_KEY"
+```
 
-Deploy script modes:
+Optional flag: `--version`
 
-- `./deploy.sh dev|prod|test` (legacy static/nginx flow)
-- `./deploy.sh binary-test|binary-prod` (Go binary flow)
+## Production deployment (Go binary)
+
+1. Set `BIN_INSTALL_DIR` in `.env` to a stable path outside the project directory (e.g. `/volume1/homes/nate/apps/mydeck-console`). Leave unset to keep the binary in `./build/`.
+2. Build and install:
+   ```
+   ./deploy.sh binary-prod
+   ```
+   This runs a production SPA build, compiles the binary, and copies it to `BIN_INSTALL_DIR/`.
+3. Start:
+   ```
+   ./scripts/start-prod.sh   # listens on 127.0.0.1:8890
+   ```
+   The script reads `READECK_UPSTREAM`, `BRAVE_API_KEY`, and `BIN_INSTALL_DIR` from `.env` automatically.
+4. If nginx fronts the binary (optional, for HTTPS termination):
+   ```nginx
+   location / {
+       proxy_pass http://127.0.0.1:8890;
+   }
+   ```
+5. Stop: `./scripts/stop-prod.sh`
+
+Deploy script mode reference:
+
+- `./deploy.sh dev|prod|test` — legacy nginx-hosted SPA flow
+- `./deploy.sh binary-dev|binary-prod` — Go single-binary flow
 
 ---
 

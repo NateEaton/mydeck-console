@@ -66,8 +66,8 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 
 ### Other drawer entries
 
-- [ ] User Guide — markdown rendered client-side from `docs/user-guide.md`.
-- [ ] About — patterned on MyDeck's `AboutScreen`, with console-specific content (version, credits, license, active Readeck server info).
+- [x] User Guide — markdown rendered client-side from `docs/user-guide.md`. ([src/ui-v2/components/UserGuideView.svelte](src/ui-v2/components/UserGuideView.svelte), [src/lib/markdown.js](src/lib/markdown.js))
+- [x] About — patterned on MyDeck's `AboutScreen`, with console-specific content (version, credits, license, active Readeck server info). ([src/ui-v2/components/AboutView.svelte](src/ui-v2/components/AboutView.svelte))
 
 ### Scoring rewrite ([src/lib/scoring.js](src/lib/scoring.js))
 
@@ -91,16 +91,16 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 
 ---
 
-## Go single-binary migration — after UX refactor
+## Go single-binary migration — in progress
 
-Full plan in [docs/go-migration.md](docs/go-migration.md). Summary checkboxes:
+Full plan in [docs/go-migration.md](docs/go-migration.md). Runtime scaffold is complete (see `cmd/`, `internal/`); remaining items below.
 
-- [ ] Scaffold `cmd/mydeck-console` + `internal/{server,proxy,config}` packages.
-- [ ] `go:embed` the Svelte `dist/` with a build script that enforces `npm run build` before `go build`.
-- [ ] Static handler with SPA fallback; carve out `/api/`, `/cdx/`, `/brave/`.
-- [ ] Three `httputil.ReverseProxy` handlers. `/brave/` injects `X-Subscription-Token` via `Director`.
-- [ ] CLI flags + env defaults (`--listen`, `--readeck-upstream`, `--brave-key`). Fail fast on missing upstream.
-- [ ] Graceful shutdown, 120s `/cdx/` timeout, correct Host/SNI for archive.org.
+- [x] Scaffold `cmd/mydeck-console` + `internal/{server,proxy,config}` packages.
+- [x] `go:embed` the Svelte `dist/` with a build script that enforces `npm run build` before `go build` (`deploy.sh binary-dev|binary-prod`).
+- [x] Static handler with SPA fallback; carve out `/api/`, `/cdx/`, `/brave/`.
+- [x] Three `httputil.ReverseProxy` handlers. `/brave/` injects `X-Subscription-Token` via `Director`.
+- [x] CLI flags + env defaults (`--listen`, `--readeck-upstream`, `--brave-key`). Fail fast on missing upstream.
+- [x] Graceful shutdown, 120s `/cdx/` timeout, correct Host/SNI for archive.org.
 - [ ] Tests: SPA fallback, Brave header injection, missing-upstream error.
 - [ ] Cross-compile for linux/amd64, linux/arm64, darwin, windows.
 - [ ] GitHub Actions release workflow: `npm ci && npm run build && go build`, attach platform binaries to each tag.

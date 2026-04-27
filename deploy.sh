@@ -7,8 +7,7 @@ set -e # Exit on any error
 if [ -f .env ]; then
     export PROD_DEPLOY_DIR=$(grep '^PROD_DEPLOY_DIR=' .env | cut -d '=' -f2)
     export DEV_DEPLOY_DIR=$(grep '^DEV_DEPLOY_DIR=' .env | cut -d '=' -f2)
-    export PROD_BIN_DEPLOY_DIR=$(grep '^PROD_BIN_DEPLOY_DIR=' .env | cut -d '=' -f2)
-    export DEV_BIN_DEPLOY_DIR=$(grep '^DEV_BIN_DEPLOY_DIR=' .env | cut -d '=' -f2)
+    export BIN_INSTALL_DIR=$(grep '^BIN_INSTALL_DIR=' .env | cut -d '=' -f2)
 fi
 
 # --- Configuration ---
@@ -21,21 +20,20 @@ EMBED_WEB_DIR="${PROJECT_ROOT}/cmd/mydeck-console/web"
 
 PROD_DEPLOY_DIR="${PROD_DEPLOY_DIR:-}"
 DEV_DEPLOY_DIR="${DEV_DEPLOY_DIR:-}"
-PROD_BIN_DEPLOY_DIR="${PROD_BIN_DEPLOY_DIR:-$PROD_DEPLOY_DIR}"
-DEV_BIN_DEPLOY_DIR="${DEV_BIN_DEPLOY_DIR:-$DEV_DEPLOY_DIR}"
+BIN_INSTALL_DIR="${BIN_INSTALL_DIR:-}"
 
 # --- Environment Handling ---
 ENVIRONMENT=$1
 
 if [ -z "$ENVIRONMENT" ]; then
     echo "Error: No environment specified."
-    echo "Usage: ./deploy.sh [dev|prod|test|binary-test|binary-prod]"
+    echo "Usage: ./deploy.sh [dev|prod|test|binary-dev|binary-prod]"
     exit 1
 fi
 
 IS_BINARY=false
 
-if [ "$ENVIRONMENT" = "test" ] || [ "$ENVIRONMENT" = "binary-test" ]; then
+if [ "$ENVIRONMENT" = "test" ] || [ "$ENVIRONMENT" = "binary-dev" ]; then
     echo "Building MyDeck Console for testing with preview server..."
 else
     echo "Building MyDeck Console for '$ENVIRONMENT' environment..."
@@ -82,36 +80,36 @@ if [ "$ENVIRONMENT" = "prod" ]; then
 elif [ "$ENVIRONMENT" = "binary-prod" ]; then
     IS_BINARY=true
 
-    echo "PRODUCTION BINARY DEPLOYMENT REQUESTED"
-    echo "You are about to build and deploy the Go single-binary."
-    echo "This will overwrite the live binary at destination."
+    echo "PRODUCTION BINARY BUILD REQUESTED"
+    echo "You are about to build the Go single-binary with a production SPA build."
+    if [ -n "$BIN_INSTALL_DIR" ]; then
+        echo "The binary will be copied to: $BIN_INSTALL_DIR"
+    fi
     echo ""
     read -p "Are you sure you want to continue? Type 'yes' to proceed: " -r
     echo ""
     if [[ ! $REPLY =~ ^yes$ ]]; then
-        echo "Production binary deployment cancelled."
+        echo "Production binary build cancelled."
         exit 1
     fi
-    echo "Production binary deployment confirmed. Proceeding..."
+    echo "Proceeding..."
     echo ""
 
     echo "Installing dependencies..."
     npm install
 
-    DEPLOY_DIR="$PROD_BIN_DEPLOY_DIR"
     export BASE_PATH=""
 elif [ "$ENVIRONMENT" = "dev" ]; then
     DEPLOY_DIR="$DEV_DEPLOY_DIR"
     export BASE_PATH="/mydeck-console-dev"
 elif [ "$ENVIRONMENT" = "test" ]; then
     export BASE_PATH=""
-elif [ "$ENVIRONMENT" = "binary-test" ]; then
+elif [ "$ENVIRONMENT" = "binary-dev" ]; then
     IS_BINARY=true
-    DEPLOY_DIR="$DEV_BIN_DEPLOY_DIR"
     export BASE_PATH=""
 else
     echo "Error: Invalid environment '$ENVIRONMENT'."
-    echo "Usage: ./deploy.sh [dev|prod|test|binary-test|binary-prod]"
+    echo "Usage: ./deploy.sh [dev|prod|test|binary-dev|binary-prod]"
     exit 1
 fi
 
@@ -134,7 +132,7 @@ elif [ "$ENVIRONMENT" = "binary-prod" ]; then
     echo "Using production build for embedded SPA assets"
     npm run build -- --mode production
 else
-    echo "Using dev build for test preview"
+    echo "Using dev build"
     npm run build:dev
 fi
 
@@ -168,25 +166,30 @@ if [ $? -eq 0 ]; then
         chmod +x "$BINARY_OUTPUT_PATH"
         echo "Go binary build completed: $BINARY_OUTPUT_PATH"
 
-        if [ "$ENVIRONMENT" = "binary-test" ]; then
-            echo "Binary test build complete."
+        if [ "$ENVIRONMENT" = "binary-dev" ]; then
+            echo "Binary dev build complete."
             echo "Build ID: $BUILD_ID"
-            echo "Binary size:"
+            echo "Binary: $BINARY_OUTPUT_PATH"
             du -sh "$BINARY_OUTPUT_PATH"
+            echo ""
+            echo "Run with: ./scripts/start-dev.sh"
         else
-            if [ -n "$DEPLOY_DIR" ] && [ -d "$DEPLOY_DIR" ]; then
-                echo "Deploying binary to $DEPLOY_DIR..."
-                cp "$BINARY_OUTPUT_PATH" "$DEPLOY_DIR/$BINARY_NAME"
-                chmod +x "$DEPLOY_DIR/$BINARY_NAME"
-                echo "Binary deployment to $DEPLOY_DIR completed successfully!"
-                echo "Deployed Build ID: $BUILD_ID"
-                echo "Binary size:"
-                du -sh "$DEPLOY_DIR/$BINARY_NAME"
-            else
-                echo "Warning: Binary deployment directory not configured or does not exist."
-                echo "Set PROD_BIN_DEPLOY_DIR (or fallback PROD_DEPLOY_DIR) in .env."
-                echo "Built binary is available at $BINARY_OUTPUT_PATH"
+            if [ -n "$BIN_INSTALL_DIR" ] && [ -d "$BIN_INSTALL_DIR" ]; then
+                echo "Installing binary to $BIN_INSTALL_DIR..."
+                cp "$BINARY_OUTPUT_PATH" "$BIN_INSTALL_DIR/$BINARY_NAME"
+                chmod +x "$BIN_INSTALL_DIR/$BINARY_NAME"
+                echo "Installed: $BIN_INSTALL_DIR/$BINARY_NAME"
                 echo "Build ID: $BUILD_ID"
+                du -sh "$BIN_INSTALL_DIR/$BINARY_NAME"
+                echo ""
+                echo "Run with: ./scripts/start-prod.sh"
+            else
+                echo "Binary build complete. BIN_INSTALL_DIR not set or does not exist."
+                echo "Set BIN_INSTALL_DIR in .env to install the binary to a stable location."
+                echo "Binary is at: $BINARY_OUTPUT_PATH"
+                echo "Build ID: $BUILD_ID"
+                echo ""
+                echo "Run with: ./scripts/start-prod.sh"
             fi
         fi
     elif [ "$ENVIRONMENT" = "test" ]; then
