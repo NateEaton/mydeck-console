@@ -93,15 +93,13 @@ Outputs to `dist/`.
 
 ## Development (Go binary)
 
-Build embedded binary (dev SPA build, fast iteration):
+SPA development uses `npm run dev` (Vite, no binary needed). To test the binary itself locally, build with:
 
 ```
-./deploy.sh binary-dev
+./deploy.sh binary-prod
 ```
 
-This builds SPA assets into `cmd/mydeck-console/web/` then runs `go build`. The binary lands at `./build/mydeck-console`.
-
-Start/stop via the scripts (reads `BRAVE_API_KEY` and `READECK_UPSTREAM` from `.env` automatically):
+The binary lands at `./build/mydeck-console`. Run it via the scripts:
 
 ```
 ./scripts/start-dev.sh    # listens on 127.0.0.1:8889
@@ -122,29 +120,39 @@ Optional flag: `--version`
 
 ## Production deployment (Go binary)
 
-1. Set `BIN_INSTALL_DIR` in `.env` to a stable path outside the project directory (e.g. `/volume1/homes/nate/apps/mydeck-console`). Leave unset to keep the binary in `./build/`.
+1. Set `BIN_INSTALL_DIR` in your project `.env` to a stable directory outside the web root (e.g. `/volume1/homes/Nathan/apps/mydeck-console`).
 2. Build and install:
    ```
    ./deploy.sh binary-prod
    ```
-   This runs a production SPA build, compiles the binary, and copies it to `BIN_INSTALL_DIR/`.
-3. Start:
+   This runs a production SPA build, compiles the binary, and copies **the binary and the management scripts** to `BIN_INSTALL_DIR/` — a self-contained standalone install.
+3. Create a `.env` in `BIN_INSTALL_DIR` with your production config:
    ```
-   ./scripts/start-prod.sh   # listens on 127.0.0.1:8890
+   READECK_UPSTREAM=http://192.168.0.11:8080
+   BRAVE_API_KEY=your-key-here
    ```
-   The script reads `READECK_UPSTREAM`, `BRAVE_API_KEY`, and `BIN_INSTALL_DIR` from `.env` automatically.
-4. If nginx fronts the binary (optional, for HTTPS termination):
+   The scripts read config from the directory they live in, so no project checkout is needed at runtime.
+4. Start (from the install directory or anywhere):
+   ```
+   /volume1/homes/Nathan/apps/mydeck-console/start-prod.sh   # listens on 127.0.0.1:8890
+   ```
+5. Stop / status:
+   ```
+   /volume1/homes/Nathan/apps/mydeck-console/stop-prod.sh
+   /volume1/homes/Nathan/apps/mydeck-console/status-prod.sh
+   ```
+6. If nginx fronts the binary (optional, for HTTPS termination):
    ```nginx
    location / {
        proxy_pass http://127.0.0.1:8890;
    }
    ```
-5. Stop: `./scripts/stop-prod.sh`
+7. To auto-start on boot (Synology): add a Task Scheduler triggered task (Boot-up) that runs `/volume1/homes/Nathan/apps/mydeck-console/start-prod.sh`.
 
 Deploy script mode reference:
 
 - `./deploy.sh dev|prod|test` — legacy nginx-hosted SPA flow
-- `./deploy.sh binary-dev|binary-prod` — Go single-binary flow
+- `./deploy.sh binary-prod` — Go single-binary flow (build + install)
 
 ---
 

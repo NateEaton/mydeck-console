@@ -27,14 +27,14 @@ ENVIRONMENT=$1
 
 if [ -z "$ENVIRONMENT" ]; then
     echo "Error: No environment specified."
-    echo "Usage: ./deploy.sh [dev|prod|test|binary-dev|binary-prod]"
+    echo "Usage: ./deploy.sh [dev|prod|test|binary-prod]"
     exit 1
 fi
 
 IS_BINARY=false
 
-if [ "$ENVIRONMENT" = "test" ] || [ "$ENVIRONMENT" = "binary-dev" ]; then
-    echo "Building MyDeck Console for testing with preview server..."
+if [ "$ENVIRONMENT" = "test" ]; then
+    echo "Building MyDeck Console for test preview..."
 else
     echo "Building MyDeck Console for '$ENVIRONMENT' environment..."
 fi
@@ -54,6 +54,7 @@ try {
 }
 ")
 echo "Build ID: $BUILD_ID"
+export BUILD_ID
 
 DEPLOY_DIR=""
 export BASE_PATH=""
@@ -104,12 +105,9 @@ elif [ "$ENVIRONMENT" = "dev" ]; then
     export BASE_PATH="/mydeck-console-dev"
 elif [ "$ENVIRONMENT" = "test" ]; then
     export BASE_PATH=""
-elif [ "$ENVIRONMENT" = "binary-dev" ]; then
-    IS_BINARY=true
-    export BASE_PATH=""
 else
     echo "Error: Invalid environment '$ENVIRONMENT'."
-    echo "Usage: ./deploy.sh [dev|prod|test|binary-dev|binary-prod]"
+    echo "Usage: ./deploy.sh [dev|prod|test|binary-prod]"
     exit 1
 fi
 
@@ -166,31 +164,35 @@ if [ $? -eq 0 ]; then
         chmod +x "$BINARY_OUTPUT_PATH"
         echo "Go binary build completed: $BINARY_OUTPUT_PATH"
 
-        if [ "$ENVIRONMENT" = "binary-dev" ]; then
-            echo "Binary dev build complete."
-            echo "Build ID: $BUILD_ID"
-            echo "Binary: $BINARY_OUTPUT_PATH"
-            du -sh "$BINARY_OUTPUT_PATH"
-            echo ""
-            echo "Run with: ./scripts/start-dev.sh"
-        else
-            if [ -n "$BIN_INSTALL_DIR" ] && [ -d "$BIN_INSTALL_DIR" ]; then
-                echo "Installing binary to $BIN_INSTALL_DIR..."
-                cp "$BINARY_OUTPUT_PATH" "$BIN_INSTALL_DIR/$BINARY_NAME"
-                chmod +x "$BIN_INSTALL_DIR/$BINARY_NAME"
-                echo "Installed: $BIN_INSTALL_DIR/$BINARY_NAME"
-                echo "Build ID: $BUILD_ID"
-                du -sh "$BIN_INSTALL_DIR/$BINARY_NAME"
-                echo ""
-                echo "Run with: ./scripts/start-prod.sh"
-            else
-                echo "Binary build complete. BIN_INSTALL_DIR not set or does not exist."
-                echo "Set BIN_INSTALL_DIR in .env to install the binary to a stable location."
-                echo "Binary is at: $BINARY_OUTPUT_PATH"
-                echo "Build ID: $BUILD_ID"
-                echo ""
-                echo "Run with: ./scripts/start-prod.sh"
+        if [ -n "$BIN_INSTALL_DIR" ] && [ -d "$BIN_INSTALL_DIR" ]; then
+            echo "Installing binary to $BIN_INSTALL_DIR..."
+            cp "$BINARY_OUTPUT_PATH" "$BIN_INSTALL_DIR/$BINARY_NAME"
+            chmod +x "$BIN_INSTALL_DIR/$BINARY_NAME"
+
+            echo "Installing management scripts to $BIN_INSTALL_DIR..."
+            for script in run-instance.sh start-prod.sh stop-prod.sh status-prod.sh; do
+                cp "${PROJECT_ROOT}/scripts/${script}" "$BIN_INSTALL_DIR/"
+                chmod +x "$BIN_INSTALL_DIR/${script}"
+            done
+
+            if [ ! -f "$BIN_INSTALL_DIR/.env" ]; then
+                echo "Note: no .env found in $BIN_INSTALL_DIR."
+                echo "      Copy your .env there and set READECK_UPSTREAM, BRAVE_API_KEY, etc."
+                echo "      The scripts read config from the directory they live in."
             fi
+
+            echo "Installed: $BIN_INSTALL_DIR/$BINARY_NAME"
+            echo "Build ID: $BUILD_ID"
+            du -sh "$BIN_INSTALL_DIR/$BINARY_NAME"
+            echo ""
+            echo "Run with: $BIN_INSTALL_DIR/start-prod.sh"
+        else
+            echo "Binary build complete. BIN_INSTALL_DIR not set or does not exist."
+            echo "Set BIN_INSTALL_DIR in .env to install the binary to a stable location."
+            echo "Binary is at: $BINARY_OUTPUT_PATH"
+            echo "Build ID: $BUILD_ID"
+            echo ""
+            echo "Run with: ./scripts/start-prod.sh"
         fi
     elif [ "$ENVIRONMENT" = "test" ]; then
         echo "Starting test preview server..."

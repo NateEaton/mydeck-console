@@ -10,20 +10,30 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Load .env from project root so BRAVE_API_KEY, READECK_UPSTREAM, and BIN_INSTALL_DIR
-# are available without requiring manual shell exports.
-if [[ -f "$ROOT_DIR/.env" ]]; then
-    set -a; source "$ROOT_DIR/.env"; set +a
+# Detect layout. Standalone install: binary lives alongside scripts (deploy.sh
+# binary-prod copies both to BIN_INSTALL_DIR). Project checkout: scripts in
+# scripts/, binary in build/. In standalone mode SCRIPT_DIR is the base for
+# .env, run/, and logs/; in project mode ROOT_DIR is.
+if [[ -x "$SCRIPT_DIR/mydeck-console" ]]; then
+    _base="$SCRIPT_DIR"
+    _bin_default="$SCRIPT_DIR/mydeck-console"
+else
+    _base="$ROOT_DIR"
+    _bin_from_install="${BIN_INSTALL_DIR:+$BIN_INSTALL_DIR/mydeck-console}"
+    _bin_default="${_bin_from_install:-$ROOT_DIR/build/mydeck-console}"
+fi
+
+if [[ -f "$_base/.env" ]]; then
+    set -a; source "$_base/.env"; set +a
 fi
 
 INSTANCE="${INSTANCE:-dev}"
-_bin_default="${BIN_INSTALL_DIR:+$BIN_INSTALL_DIR/mydeck-console}"
-APP_BIN="${APP_BIN:-${_bin_default:-$ROOT_DIR/build/mydeck-console}}"
+APP_BIN="${APP_BIN:-$_bin_default}"
 APP_LISTEN="${APP_LISTEN:-127.0.0.1:8889}"
 APP_UPSTREAM="${APP_UPSTREAM:-${READECK_UPSTREAM:-http://127.0.0.1:8888}}"
 APP_BRAVE_KEY="${APP_BRAVE_KEY:-${BRAVE_API_KEY:-}}"
-RUN_DIR="${RUN_DIR:-$ROOT_DIR/run}"
-LOG_DIR="${LOG_DIR:-$ROOT_DIR/logs}"
+RUN_DIR="${RUN_DIR:-$_base/run}"
+LOG_DIR="${LOG_DIR:-$_base/logs}"
 PID_FILE="$RUN_DIR/mydeck-console-${INSTANCE}.pid"
 LOG_FILE="$LOG_DIR/mydeck-console-${INSTANCE}.log"
 

@@ -14,6 +14,7 @@
 
   const SERVER_INFO_KEY = 'readeck_server_info';
   const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+  const BUILD_ID = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : '';
 
   const OSS_LIBRARIES = [
     { name: 'Svelte', url: 'https://svelte.dev/' },
@@ -156,20 +157,20 @@
 
   function appDetailLines() {
     const runtimeLabel = runtimeMeta?.runtime === 'go-binary' ? 'Go executable' : 'Static web';
-    return [
-      `Web bundle version: ${APP_VERSION}`,
+    const lines = [`Web bundle version: ${APP_VERSION}`];
+    if (BUILD_ID) lines.push(`Build ID: ${BUILD_ID}`);
+    lines.push(
       `Host runtime: ${runtimeLabel}${runtimeMeta?.version ? ` (${runtimeMeta.version})` : ''}`,
       `Mode: ${import.meta.env.MODE || 'production'}`,
       `Origin: ${window.location.origin}`,
-    ];
+    );
+    return lines;
   }
 
-  function serverSummary() {
-    if (serverInfoLoading && !serverInfo) return 'Loading...';
-    if (serverInfoError && !serverInfo) return 'Could not load server information';
-    if (!serverInfo) return 'No server information available';
-    return serverInfo.canonical;
-  }
+  $: serverSummaryText = serverInfoLoading && !serverInfo ? 'Loading...'
+    : serverInfoError && !serverInfo ? 'Could not load server information'
+    : !serverInfo ? 'No server information available'
+    : serverInfo.canonical || serverInfo.release || 'Connected';
 
   function serverDetailLines() {
     if (!serverInfo) return [];
@@ -242,7 +243,7 @@
     <button class="collapse-head" on:click={() => (serverExpanded = !serverExpanded)}>
       <div>
         <div class="subheading">Server</div>
-        <div class="summary">{serverSummary()}</div>
+        <div class="summary">{serverSummaryText}</div>
       </div>
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d={serverExpanded ? MdiChevronUp : MdiChevronDown} fill="currentColor" />
