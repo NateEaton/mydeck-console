@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
   import {
-    MdiInfo,
     MdiLink,
     MdiList,
     MdiChevronDown,
@@ -194,14 +193,15 @@
 </script>
 
 <div class="about-wrap">
-  <section class="card centered">
-    <div class="brand-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="42" height="42">
-        <path d={MdiInfo} fill="currentColor" />
-      </svg>
+  <section class="card">
+    <div class="brand-header">
+      <img src="{import.meta.env.BASE_URL}icon-192.png" alt="" width="72" height="72" class="brand-icon-img" />
+      <div class="brand-divider" aria-hidden="true"></div>
+      <div class="brand-text">
+        <div class="brand-name">MyDeck Console</div>
+        <div class="version">Version {APP_VERSION}</div>
+      </div>
     </div>
-    <h2>MyDeck Console</h2>
-    <p class="version">Version {APP_VERSION}</p>
     <p class="description">
       A Readeck bookmark repair companion focused on triage, candidate review, and safe replacement lineage.
     </p>
@@ -334,22 +334,40 @@
     padding: 18px 20px;
   }
 
-  .centered {
-    text-align: center;
+  .brand-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
   }
 
-  .brand-icon {
-    color: var(--md-sys-color-primary);
-    margin-bottom: 8px;
+  .brand-icon-img {
+    border-radius: 16px;
+    flex-shrink: 0;
   }
 
-  h2 {
-    margin: 0 0 4px;
-    font-size: 1.22rem;
+  .brand-divider {
+    width: 1px;
+    height: 52px;
+    background: var(--md-sys-color-outline);
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .brand-name {
+    font-size: 1.35rem;
+    font-weight: 500;
+    line-height: 1.2;
   }
 
   .version {
-    margin: 0 0 10px;
+    margin: 0;
     color: var(--md-sys-color-on-surface-variant);
     font-size: 0.9rem;
   }

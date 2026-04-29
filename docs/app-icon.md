@@ -95,11 +95,20 @@ all other sizes from it.
 |---|---|---|---|
 | `icon-1024.png` | 1024×1024 | (AI output) | Master / source of truth |
 | `icon-512.png` | 512×512 | Squoosh | PWA manifest `any` |
-| `icon-512-maskable.png` | 512×512 | Maskable.app | PWA manifest `maskable` |
+| `icon-maskable-512.png` | 512×512 | Maskable.app | PWA manifest `maskable` |
 | `icon-192.png` | 192×192 | Squoosh | PWA manifest fallback |
 | `apple-touch-icon.png` | 180×180 | Squoosh | iOS home screen |
-| `favicon.png` | 32×32 | Squoosh | Favicon fallback |
-| `favicon.svg` | — | Vectorizer.ai | SVG favicon (use if trace is clean; keep PNG fallback either way) |
+| `favicon.ico` | multi-size | favicon.io/favicon-converter | Favicon; ICO format preferred for broad support |
+| `favicon.svg` | — | Vectorizer.ai | Optional SVG favicon (nothing breaks without it) |
+
+**Favicon tip:** for a sharp favicon, crop the 1024px PNG so the teal square
+fills ~95% of the canvas before converting (minimal outer padding). Better still:
+use a square-cropped version with the teal background extended to the canvas
+edges — rounded corners just waste pixels at 16–32px.
+
+**v2 improvements needed:** (1) favicon — current ICO has too much padding around
+the graphic; (2) maskable icon — content sits slightly small for aggressive
+Android crops and has a minor star artifact in the lower-right corner.
 
 **Maskable check:** open `icon-1024.png` in [maskable.app](https://maskable.app)
 and verify the bookmarks and chain are fully inside the safe-zone circle before
@@ -118,10 +127,15 @@ request a repeat with `#404040`.
 Replace the existing single favicon link:
 
 ```html
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-<link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/manifest.webmanifest" />
+```
+
+If an SVG favicon is later produced, add it before the `.ico` line:
+
+```html
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 ```
 
 ### `public/manifest.webmanifest` (new file)
@@ -131,11 +145,11 @@ Replace the existing single favicon link:
   "name": "MyDeck Console",
   "short_name": "Console",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#064C5C",
   "theme_color": "#064C5C"
@@ -152,7 +166,7 @@ Android `MyDeckBrandHeader` pattern: icon left, vertical divider, app name right
 ```svelte
 <section class="card">
   <div class="brand-header">
-    <img src="/icon-192.png" alt="" width="72" height="72" class="brand-icon-img" />
+    <img src="{import.meta.env.BASE_URL}icon-192.png" alt="" width="72" height="72" class="brand-icon-img" />
     <div class="brand-divider" aria-hidden="true"></div>
     <div class="brand-text">
       <div class="brand-name">MyDeck Console</div>
