@@ -80,7 +80,7 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 ### Behavioral / cross-cutting
 
 - [x] Detect **already-archived originals** and surface it in the Bookmark view header + Apply confirmation ("Original is already archived — Apply will add the `replaced-*` label only"). ([src/ui-v2/components/BookmarkView.svelte](src/ui-v2/components/BookmarkView.svelte) note block; [src/ui-v2/components/ApplyConfirmDialog.svelte](src/ui-v2/components/ApplyConfirmDialog.svelte) per-radio sub-text)
-- [ ] Persist in-flight repair state (selected bookmark, candidates, preview URL) so a page reload doesn't lose context.
+- [x] Persist in-flight repair state (selected bookmark, candidates, preview URL) so a page reload doesn't lose context. (`sessionStorage[repair_state]` in [src/ui-v2/AppV2.svelte](src/ui-v2/AppV2.svelte))
 
 ### Deferred in this milestone
 

@@ -50,6 +50,7 @@
   } from './icons/index.js';
 
   const WIDE_MIN = 768;
+  const REPAIR_STATE_KEY = 'repair_state';
 
   const LABELS_BY_SOURCE = {
     archive: { recovery: RECOVERY_LABEL_ARCHIVE, deprecation: DEPRECATION_LABEL_ARCHIVE },
@@ -83,6 +84,18 @@
   const archiveClient = new ArchiveClient();
   const braveClient = new BraveClient();
 
+  // Read saved repair state synchronously at script init. The reactive `$:`
+  // save block below runs before onMount, so we have to seed initial values
+  // from sessionStorage here — otherwise the block would wipe the key before
+  // we get a chance to restore.
+  let _initialRepair = null;
+  if (apiToken && typeof window !== 'undefined') {
+    try {
+      const saved = sessionStorage.getItem(REPAIR_STATE_KEY);
+      if (saved) _initialRepair = JSON.parse(saved);
+    } catch { /* ignore corrupt state */ }
+  }
+
   let bookmarks = [];
   let loading = false;
   let activeView = 'triage';
@@ -95,11 +108,11 @@
   let isWide = typeof window !== 'undefined' ? window.innerWidth >= WIDE_MIN : true;
   let drawerOpen = false;
 
-  let selectedBookmark = null;
-  let selectedCandidate = null;
+  let selectedBookmark = _initialRepair?.bookmark || null;
+  let selectedCandidate = _initialRepair?.candidate || null;
   let loadToken = 0;
-  let archiveScored = [];
-  let braveScored = [];
+  let archiveScored = _initialRepair?.archiveScored || [];
+  let braveScored = _initialRepair?.braveScored || [];
   let archiveLoading = false;
   let braveLoading = false;
   let archiveError = null;
@@ -145,6 +158,21 @@
                 : (VIEW_TITLES[activeView] || activeView);
   $: showBack = routeMode !== 'drawer';
   $: showMenu = routeMode === 'drawer' && !isWide && !!apiToken;
+
+  // Persist repair state to sessionStorage so a reload restores context.
+  // Cleared automatically when selectedBookmark returns to null.
+  $: if (typeof window !== 'undefined') {
+    if (selectedBookmark) {
+      sessionStorage.setItem(REPAIR_STATE_KEY, JSON.stringify({
+        bookmark: selectedBookmark,
+        candidate: selectedCandidate,
+        archiveScored,
+        braveScored,
+      }));
+    } else {
+      sessionStorage.removeItem(REPAIR_STATE_KEY);
+    }
+  }
 
   function handleResize() {
     isWide = window.innerWidth >= WIDE_MIN;
@@ -630,6 +658,13 @@
     await processOAuthCallback();
 
     if (!apiToken) return;
+
+    // Repair state was restored synchronously at script init (see _initialRepair).
+    // Kick off the extraction-log fetch so errorClass repopulates in the header.
+    if (selectedBookmark) {
+      loadExtractionLogFor(selectedBookmark);
+    }
+
     const lastSync = await hydrateFromCache();
     const stale = !lastSync || Date.now() - lastSync > CACHE_STALE_MS;
     if (stale || bookmarks.length === 0) {
