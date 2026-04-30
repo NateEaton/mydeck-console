@@ -45,6 +45,25 @@ Apply uses **Clone, Replace, Deprecate**:
 - **Replaced**: read-only list of originals that were deprecated by Apply.
 - These views are for review and audit, not direct editing.
 
+## Sort and filter
+
+The four list views — **Triage**, **Recovered**, **Replaced**, and **Ignored** — share sort and filter controls in the top app bar.
+
+### Sort
+
+- Tap the **sort** icon to choose how the list is ordered: Added, Published, Title, or Site name.
+- The active group shows an arrow indicating direction (↓ descending, ↑ ascending).
+- Tap the active group again to reverse the direction.
+- The choice is shared across all four lists and remembered between sessions.
+
+### Filter
+
+- Tap the **filter** icon to open the filter form.
+- Available fields: search (full text), title, site, label, from/to date, type (Article / Picture / Video), and tri-state toggles for Favorite, Archived, and With labels.
+- Tap **Search** (or press Enter) to apply. The active filters appear as chips below the top app bar; each chip has a ✕ to clear that one field.
+- The top bar title shows the filtered count, e.g. `Triage (12)`. Reset returns to the unfiltered list.
+- Each list has its own filter state — switching between lists doesn't carry filters across, and filters reset when you reload the app.
+
 ## Settings
 
 - **Action on Apply** sets whether originals are archived (default) or deleted.

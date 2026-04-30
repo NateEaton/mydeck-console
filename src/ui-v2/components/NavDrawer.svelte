@@ -1,13 +1,13 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import {
-    MdiAlert,
-    MdiCheckCircle,
+    MdiAlertOutline,
+    MdiCheckCircleOutline,
     MdiSwapHorizontal,
-    MdiEyeOff,
-    MdiCog,
-    MdiHelpCircle,
-    MdiInfo,
+    MdiEyeOffOutline,
+    MdiCogOutline,
+    MdiHelpCircleOutline,
+    MdiInfoOutline,
   } from '../icons/index.js';
 
   export let active = 'triage';
@@ -19,15 +19,15 @@
   const dispatch = createEventDispatcher();
 
   const items = [
-    { key: 'triage',    label: 'Triage',     icon: MdiAlert },
-    { key: 'recovered', label: 'Recovered',  icon: MdiCheckCircle },
+    { key: 'triage',    label: 'Triage',     icon: MdiAlertOutline },
+    { key: 'recovered', label: 'Recovered',  icon: MdiCheckCircleOutline },
     { key: 'replaced',  label: 'Replaced',   icon: MdiSwapHorizontal },
-    { key: 'ignored',   label: 'Ignored',    icon: MdiEyeOff },
+    { key: 'ignored',   label: 'Ignored',    icon: MdiEyeOffOutline },
   ];
   const footerItems = [
-    { key: 'settings',  label: 'Settings',   icon: MdiCog },
-    { key: 'guide',     label: 'User Guide', icon: MdiHelpCircle },
-    { key: 'about',     label: 'About',      icon: MdiInfo },
+    { key: 'settings',  label: 'Settings',   icon: MdiCogOutline },
+    { key: 'guide',     label: 'User Guide', icon: MdiHelpCircleOutline },
+    { key: 'about',     label: 'About',      icon: MdiInfoOutline },
   ];
 
   function pick(key) {

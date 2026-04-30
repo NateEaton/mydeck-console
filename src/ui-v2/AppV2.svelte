@@ -51,6 +51,9 @@
     MdiWeb,
     MdiEyeOff,
     MdiFilterVariant,
+    MdiLink,
+    MdiEyeOffOutline,
+    MdiFileDocumentOutline,
   } from './icons/index.js';
 
   import { compareBookmarks, loadSortOption, saveSortOption } from '../lib/sort.js';
@@ -108,7 +111,7 @@
     } catch { /* ignore corrupt state */ }
   }
 
-  let bookmarks = [];
+  let bookmarks =[];
   let loading = false;
   let activeView = 'triage';
   let sortOption = loadSortOption();
@@ -133,8 +136,8 @@
   let selectedBookmark = _initialRepair?.bookmark || null;
   let selectedCandidate = _initialRepair?.candidate || null;
   let loadToken = 0;
-  let archiveScored = _initialRepair?.archiveScored || [];
-  let braveScored = _initialRepair?.braveScored || [];
+  let archiveScored = _initialRepair?.archiveScored ||[];
+  let braveScored = _initialRepair?.braveScored ||[];
   let archiveLoading = false;
   let braveLoading = false;
   let archiveError = null;
@@ -239,11 +242,9 @@
     if (!apiToken) return;
     try {
       const [r, p] = await Promise.all([
-        client.countBookmarksByLabels(
-          [RECOVERY_LABEL_ARCHIVE, RECOVERY_LABEL_SEARCH, RECOVERY_LABEL_MANUAL]
+        client.countBookmarksByLabels([RECOVERY_LABEL_ARCHIVE, RECOVERY_LABEL_SEARCH, RECOVERY_LABEL_MANUAL]
         ),
-        client.countBookmarksByLabels(
-          [DEPRECATION_LABEL_ARCHIVE, DEPRECATION_LABEL_SEARCH, DEPRECATION_LABEL_MANUAL],
+        client.countBookmarksByLabels([DEPRECATION_LABEL_ARCHIVE, DEPRECATION_LABEL_SEARCH, DEPRECATION_LABEL_MANUAL],
           { is_archived: true }
         ),
       ]);
@@ -283,7 +284,7 @@
     selectedBookmark = null;
     selectedCandidate = null;
     archiveScored = [];
-    braveScored = [];
+    braveScored =[];
     archiveError = null;
     showOverflowMenu = false;
     showFilterSheet = false;
@@ -334,8 +335,8 @@
       selectedCandidate = null;
     } else if (selectedBookmark) {
       selectedBookmark = null;
-      archiveScored = [];
-      braveScored = [];
+      archiveScored =[];
+      braveScored =[];
       archiveError = null;
       logText = '';
       logFetchedForId = null;
@@ -345,7 +346,7 @@
   function loadCandidatesFor(b) {
     const myToken = ++loadToken;
     archiveScored = [];
-    braveScored = [];
+    braveScored =[];
     archiveLoading = true;
     braveLoading = true;
     archiveError = null;
@@ -465,7 +466,7 @@
       selectedBookmark = null;
       selectedCandidate = null;
       archiveScored = [];
-      braveScored = [];
+      braveScored =[];
       refreshLabelCounts();
     } catch (e) {
       alert(`Repair failed: ${e.message}`);
@@ -560,9 +561,9 @@
     // Reset UI state immediately.
     selectedBookmark = null;
     selectedCandidate = null;
-    bookmarks = [];
+    bookmarks =[];
     archiveScored = [];
-    braveScored = [];
+    braveScored =[];
     archiveError = null;
     activeView = 'triage';
 
@@ -583,7 +584,7 @@
     selectedCandidate = null;
     selectedBookmark = null;
     archiveScored = [];
-    braveScored = [];
+    braveScored =[];
     archiveError = null;
     logText = '';
     logFetchedForId = null;
@@ -622,7 +623,7 @@
     selectedBookmark = null;
     selectedCandidate = null;
     archiveScored = [];
-    braveScored = [];
+    braveScored =[];
     archiveError = null;
     showOverflowMenu = false;
     stageDelete({ detail: { bookmarkId: id, title } });
@@ -794,22 +795,40 @@
             </button>
             {#if showOverflowMenu}
               <div class="overflow-menu" on:click|stopPropagation role="menu">
-                <button class="menu-item" on:click={openManualDialog} role="menuitem">Manual URL</button>
-                <button class="menu-item" on:click={openLogDialog} role="menuitem" disabled={!selectedBookmark?.resources?.log?.src}>
-                  View extraction log
+                <button class="menu-item" on:click={openManualDialog} role="menuitem">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path d={MdiLink} fill="currentColor" />
+                  </svg>
+                  <span>Manual URL</span>
                 </button>
-                <button class="menu-item" on:click={openOriginal} role="menuitem">Open original in new tab</button>
-                <button class="menu-item" on:click={ignoreAndBack} role="menuitem">Ignore (keep as-is)</button>
-                <button class="menu-item danger" on:click={deleteFromCurrentView} role="menuitem">Delete</button>
+                <button class="menu-item" on:click={openLogDialog} role="menuitem" disabled={!selectedBookmark?.resources?.log?.src}>
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path d={MdiFileDocumentOutline} fill="currentColor" />
+                  </svg>
+                  <span>View extraction log</span>
+                </button>
+                <button class="menu-item" on:click={openOriginal} role="menuitem">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path d={MdiOpenInNew} fill="currentColor" />
+                  </svg>
+                  <span>Open original in new tab</span>
+                </button>
+                <button class="menu-item" on:click={ignoreAndBack} role="menuitem">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path d={MdiEyeOffOutline} fill="currentColor" />
+                  </svg>
+                  <span>Ignore (keep as-is)</span>
+                </button>
+                <button class="menu-item danger" on:click={deleteFromCurrentView} role="menuitem">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path d={MdiDelete} fill="currentColor" />
+                  </svg>
+                  <span>Delete</span>
+                </button>
               </div>
             {/if}
           </div>
         {:else if routeMode === 'preview'}
-          <button class="bar-icon" on:click={applyCurrentCandidate} title="Apply" aria-label="Apply replacement">
-            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-              <path d={MdiCheck} fill="currentColor" />
-            </svg>
-          </button>
           <button class="bar-icon" on:click={openExternalCurrent} title="Open in new tab" aria-label="Open in new tab">
             <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
               <path d={MdiOpenInNew} fill="currentColor" />
@@ -918,6 +937,19 @@
         on:undo={undoDelete}
       />
     {/if}
+
+    {#if routeMode === 'preview'}
+      <button
+        class="fab"
+        on:click={applyCurrentCandidate}
+        title="Apply"
+        aria-label="Apply replacement"
+      >
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path d={MdiCheck} fill="currentColor" />
+        </svg>
+      </button>
+    {/if}
   </div>
 </div>
 
@@ -1009,6 +1041,26 @@
   }
   .bar-icon:hover { background: var(--bg-hover); }
 
+  .fab {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: 18px;
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    box-shadow: var(--md-sys-shadow-1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 30;
+  }
+  .fab:hover { filter: brightness(1.05); }
+  .fab:active { filter: brightness(0.95); }
+
   .overflow-wrap {
     position: relative;
   }
@@ -1025,7 +1077,9 @@
     z-index: 55;
   }
   .menu-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     width: 100%;
     padding: 10px 16px;
     border: none;
@@ -1036,5 +1090,6 @@
     cursor: pointer;
   }
   .menu-item:hover { background: var(--bg-hover); }
+  .menu-item:disabled { opacity: 0.5; cursor: default; }
   .menu-item.danger { color: var(--error-fg); }
 </style>
