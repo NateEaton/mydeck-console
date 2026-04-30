@@ -4,9 +4,13 @@
   import { MdiArrowLeft } from '../icons/index.js';
   import { getIgnoredIds, getBookmark, unignoreBookmark, unignoreAll } from '../../lib/cache';
   import { compareBookmarks, DEFAULT_SORT } from '../../lib/sort.js';
+  import { matchesFilter, collectLabels } from '../../lib/filter.js';
 
   export let client;
   export let sortOption = DEFAULT_SORT;
+  export let filterState = null;
+  export let filteredCount = 0;
+  export let availableLabels = new Map();
 
   const dispatch = createEventDispatcher();
 
@@ -51,7 +55,11 @@
     }
   }
 
-  $: sortedBookmarks = [...bookmarks].sort((a, b) => compareBookmarks(a, b, sortOption));
+  $: sortedBookmarks = [...bookmarks]
+    .sort((a, b) => compareBookmarks(a, b, sortOption))
+    .filter(b => matchesFilter(b, filterState));
+  $: filteredCount = sortedBookmarks.length;
+  $: availableLabels = collectLabels(bookmarks);
 
   async function onUnignore(id) {
     await unignoreBookmark(id);

@@ -40,6 +40,8 @@
   import UserGuideView from './components/UserGuideView.svelte';
   import AboutView from './components/AboutView.svelte';
   import SortMenu from './components/SortMenu.svelte';
+  import FilterBottomSheet from './components/FilterBottomSheet.svelte';
+  import FilterBar from './components/FilterBar.svelte';
 
   import {
     MdiDotsVertical,
@@ -48,9 +50,16 @@
     MdiDelete,
     MdiWeb,
     MdiEyeOff,
+    MdiFilterVariant,
   } from './icons/index.js';
 
   import { compareBookmarks, loadSortOption, saveSortOption } from '../lib/sort.js';
+  import {
+    matchesFilter,
+    hasActiveFilters,
+    presetFor,
+    collectLabels,
+  } from '../lib/filter.js';
 
   const WIDE_MIN = 768;
   const REPAIR_STATE_KEY = 'repair_state';
@@ -104,6 +113,15 @@
   let activeView = 'triage';
   let sortOption = loadSortOption();
   let ignoredIds = new Set();
+  // Per-view filter state. `null` = no filter active (preset only). Not
+  // persisted across reloads — see docs/filter.md.
+  let filterStates = { triage: null, recovered: null, replaced: null, ignored: null };
+  let showFilterSheet = false;
+  // Filtered counts from each list view (Triage computed below; Recovered/Replaced/Ignored
+  // bind these from the view via `bind:filteredCount`).
+  let filteredCounts = { triage: 0, recovered: 0, replaced: 0, ignored: 0 };
+  // Per-view label maps for the filter sheet's label picker.
+  let viewLabels = { triage: new Map(), recovered: new Map(), replaced: new Map(), ignored: new Map() };
   // Counts shown as pills on the nav drawer. Triage and Ignored are derived
   // reactively below; Recovered / Replaced are fetched lazily.
   let recoveredCount = null;
@@ -141,14 +159,20 @@
   let prevRouteMode = 'drawer';
 
   $: merged = mergeCandidates(archiveScored, braveScored);
-  $: sortedBookmarks = [...bookmarks]
+  $: triageVisible = [...bookmarks]
     .filter(b => !ignoredIds.has(b.id))
     .sort((a, b) => compareBookmarks(a, b, sortOption));
+  $: triageFiltered = triageVisible.filter(b => matchesFilter(b, filterStates.triage));
+  $: filteredCounts.triage = triageFiltered.length;
+  $: viewLabels.triage = collectLabels(triageVisible);
   $: isListView = activeView === 'triage' || activeView === 'recovered'
                 || activeView === 'replaced' || activeView === 'ignored';
   $: saveSortOption(sortOption);
+  $: currentFilter = filterStates[activeView] || null;
+  $: currentFilterActive = hasActiveFilters(currentFilter);
   $: navCounts = {
-    triage: sortedBookmarks.length,
+    // Drawer counts reflect the unfiltered preset list — see docs/filter.md.
+    triage: triageVisible.length,
     recovered: recoveredCount,
     replaced: replacedCount,
     ignored: ignoredIds.size,
@@ -162,7 +186,9 @@
   $: topBarTitle = !apiToken ? 'Sign in'
                 : routeMode === 'preview' ? 'Preview'
                 : routeMode === 'bookmark' ? 'Bookmark'
-                : (VIEW_TITLES[activeView] || activeView);
+                : (currentFilterActive && isListView
+                    ? `${VIEW_TITLES[activeView] || activeView} (${filteredCounts[activeView] ?? 0})`
+                    : (VIEW_TITLES[activeView] || activeView));
   $: showBack = routeMode !== 'drawer';
   $: showMenu = routeMode === 'drawer' && !isWide && !!apiToken;
 
@@ -230,6 +256,27 @@
 
   function onMenuToggle() { drawerOpen = !drawerOpen; }
   function onScrim() { drawerOpen = false; }
+
+  // Filter handlers — single source of truth for filterStates[activeView].
+  // A filter that no longer narrows the view collapses back to `null` so the
+  // chip bar disappears and the title drops the count.
+  function applyFilter(next) {
+    filterStates = {
+      ...filterStates,
+      [activeView]: hasActiveFilters(next) ? next : null,
+    };
+    showFilterSheet = false;
+  }
+  function resetFilter() {
+    filterStates = { ...filterStates, [activeView]: null };
+    showFilterSheet = false;
+  }
+  function dismissFilter() {
+    showFilterSheet = false;
+  }
+  function openFilter() {
+    showFilterSheet = true;
+  }
   function onNavSelect(event) {
     activeView = event.detail.view;
     if (!isWide) drawerOpen = false;
@@ -239,6 +286,7 @@
     braveScored = [];
     archiveError = null;
     showOverflowMenu = false;
+    showFilterSheet = false;
   }
 
   function onSelectBookmark(event) {
@@ -726,6 +774,11 @@
       <svelte:fragment slot="trailing">
         {#if routeMode === 'drawer' && isListView && apiToken}
           <SortMenu value={sortOption} on:change={(e) => sortOption = e.detail.value} />
+          <button class="bar-icon" on:click={openFilter} title="Filter" aria-label="Filter">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d={MdiFilterVariant} fill="currentColor" />
+            </svg>
+          </button>
         {/if}
         {#if routeMode === 'bookmark'}
           <button class="bar-icon" on:click={previewOriginal} title="Preview original URL" aria-label="Preview original URL">
@@ -776,6 +829,14 @@
       </svelte:fragment>
     </TopAppBar>
 
+    {#if routeMode === 'drawer' && isListView && apiToken && currentFilterActive}
+      <FilterBar
+        value={currentFilter}
+        on:change={(e) => applyFilter(e.detail.value)}
+        on:open={openFilter}
+      />
+    {/if}
+
     <div class="content-scroll" bind:this={contentEl}>
       {#if routeMode === 'preview'}
         <PreviewView candidate={selectedCandidate} />
@@ -801,7 +862,7 @@
         />
       {:else if activeView === 'triage'}
         <TriageList
-          bookmarks={sortedBookmarks}
+          bookmarks={triageFiltered}
           loading={loading}
           pendingDeleteId={pendingDelete?.id ?? null}
           on:delete={stageDelete}
@@ -815,13 +876,28 @@
           on:sign-out={onSignOut}
         />
       {:else if activeView === 'recovered'}
-        <RecoveredView {client} {sortOption} />
+        <RecoveredView
+          {client}
+          {sortOption}
+          filterState={filterStates.recovered}
+          bind:filteredCount={filteredCounts.recovered}
+          bind:availableLabels={viewLabels.recovered}
+        />
       {:else if activeView === 'replaced'}
-        <ReplacedView {client} {sortOption} />
+        <ReplacedView
+          {client}
+          {sortOption}
+          filterState={filterStates.replaced}
+          bind:filteredCount={filteredCounts.replaced}
+          bind:availableLabels={viewLabels.replaced}
+        />
       {:else if activeView === 'ignored'}
         <IgnoredView
           {client}
           {sortOption}
+          filterState={filterStates.ignored}
+          bind:filteredCount={filteredCounts.ignored}
+          bind:availableLabels={viewLabels.ignored}
           on:unignored={onUnignored}
           on:unignored-all={onUnignoredAll}
         />
@@ -844,6 +920,17 @@
     {/if}
   </div>
 </div>
+
+{#if showFilterSheet && isListView}
+  <FilterBottomSheet
+    value={currentFilter}
+    preset={presetFor(activeView)}
+    availableLabels={viewLabels[activeView] || new Map()}
+    on:apply={(e) => applyFilter(e.detail.value)}
+    on:reset={resetFilter}
+    on:dismiss={dismissFilter}
+  />
+{/if}
 
 {#if showManualDialog}
   <ManualUrlDialog on:apply={onManualApply} on:cancel={onManualCancel} />

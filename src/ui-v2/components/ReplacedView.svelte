@@ -8,9 +8,13 @@
     DEPRECATION_LABEL_MANUAL,
   } from '../../lib/config';
   import { compareBookmarks, DEFAULT_SORT } from '../../lib/sort.js';
+  import { matchesFilter, collectLabels } from '../../lib/filter.js';
 
   export let client;
   export let sortOption = DEFAULT_SORT;
+  export let filterState = null;
+  export let filteredCount = 0;
+  export let availableLabels = new Map();
 
   const REPLACED_LABELS = [DEPRECATION_LABEL_ARCHIVE, DEPRECATION_LABEL_SEARCH, DEPRECATION_LABEL_MANUAL];
 
@@ -30,7 +34,11 @@
     }
   }
 
-  $: sortedBookmarks = [...bookmarks].sort((a, b) => compareBookmarks(a, b, sortOption));
+  $: sortedBookmarks = [...bookmarks]
+    .sort((a, b) => compareBookmarks(a, b, sortOption))
+    .filter(b => matchesFilter(b, filterState));
+  $: filteredCount = sortedBookmarks.length;
+  $: availableLabels = collectLabels(bookmarks);
 
   onMount(load);
 </script>
