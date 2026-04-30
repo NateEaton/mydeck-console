@@ -22,39 +22,39 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 
 ### Shell + navigation
 
-- [ ] Top app bar with hamburger menu + left nav drawer.
-- [ ] Drawer items: Triage, Recovered, Replaced, separator, Settings, User Guide, About.
-- [ ] Responsive layout: desktop and mobile (portrait + landscape).
-- [ ] Retire the current three-pane layout in [src/App.svelte](src/App.svelte).
+- [x] Top app bar with hamburger menu + left nav drawer. ([src/ui-v2/components/TopAppBar.svelte](src/ui-v2/components/TopAppBar.svelte))
+- [x] Drawer items: Triage, Recovered, Replaced, separator, Settings, User Guide, About. ([src/ui-v2/components/NavDrawer.svelte](src/ui-v2/components/NavDrawer.svelte); drawer also includes Ignored)
+- [x] Responsive layout: desktop and mobile (portrait + landscape). (permanent drawer ≥768 px, modal drawer below; [src/ui-v2/AppV2.svelte](src/ui-v2/AppV2.svelte))
+- [x] Retire the current three-pane layout in [src/App.svelte](src/App.svelte). (App.svelte deleted; [src/main.js](src/main.js) mounts AppV2 directly)
 
 ### Triage List
 
-- [ ] Cards match the live MyDeck grid shape: no thumbnail, title + site name, date icons (MDI, from MyDeck Detail dialog), label chips, four inline action icons.
-- [ ] Action icons in order: **Favorite** (dimmed/informational), **Archive** (dimmed/informational), **External Link** (opens original URL in new tab), **Delete**.
-- [ ] Dimmed-icon visual treatment: lower-contrast color, no hover affordance, no cursor change.
-- [ ] Delete-with-Undo snackbar — indefinite duration; commit on any other tap/gesture in the UI; only one pending at a time.
+- [x] Cards match the live MyDeck grid shape: no thumbnail, title + site name, date icons (MDI, from MyDeck Detail dialog), label chips, four inline action icons. ([src/ui-v2/components/TriageCard.svelte](src/ui-v2/components/TriageCard.svelte))
+- [x] Action icons in order: **Favorite** (dimmed/informational), **Archive** (dimmed/informational), **External Link** (opens original URL in new tab), **Delete**.
+- [x] Dimmed-icon visual treatment: lower-contrast color, no hover affordance, no cursor change.
+- [x] Delete-with-Undo snackbar — indefinite duration; commit on any other tap/gesture in the UI; only one pending at a time. ([src/ui-v2/components/DeleteSnackbar.svelte](src/ui-v2/components/DeleteSnackbar.svelte))
 
 ### Bookmark view (replaces today's right-pane tabs)
 
-- [ ] Top app bar: back arrow, title "Bookmark," 3-dot overflow.
-- [ ] Header: title, site name, full URL, created + published dates, favorite/archive state, user-friendly error (404/500/redirect/etc.) derived from Readeck's error reason.
-- [ ] Unified candidate list — archive.org + Brave Search interleaved by confidence.
-- [ ] Per-source skeleton while a source is loading; each source renders as it returns and the list resorts.
-- [ ] Protected "Closest to save date" section at top: closest-before snapshot preferred; closest-after only when no pre-create snapshot exists.
-- [ ] 3-dot overflow menu: Manual URL (dialog), Delete (shared snackbar flow).
-- [ ] Tapping a candidate opens the Preview view (no inline Preview / Open / Apply buttons on candidate cards).
-- [ ] Empty state when both sources return nothing.
+- [x] Top app bar: back arrow, title "Bookmark," 3-dot overflow. ([src/ui-v2/AppV2.svelte](src/ui-v2/AppV2.svelte))
+- [x] Header: title, site name, full URL, created + published dates, favorite/archive state, user-friendly error (404/500/redirect/etc.) derived from Readeck's error reason. ([src/ui-v2/components/BookmarkView.svelte](src/ui-v2/components/BookmarkView.svelte))
+- [x] Unified candidate list — archive.org + Brave Search interleaved by confidence. ([src/ui-v2/components/CandidateList.svelte](src/ui-v2/components/CandidateList.svelte), [src/ui-v2/components/CandidateCard.svelte](src/ui-v2/components/CandidateCard.svelte))
+- [x] Per-source skeleton while a source is loading; each source renders as it returns and the list resorts.
+- [x] Protected "Closest to save date" section at top: closest-before snapshot preferred; closest-after only when no pre-create snapshot exists.
+- [x] 3-dot overflow menu: Manual URL (dialog), Delete (shared snackbar flow). (overflow menu also includes View extraction log, Open original, Ignore)
+- [x] Tapping a candidate opens the Preview view (no inline Preview / Open / Apply buttons on candidate cards).
+- [x] Empty state when both sources return nothing.
 
 ### Preview view
 
-- [ ] Top app bar: back, Apply, Delete, Open ↗.
-- [ ] Preview iframe behavior matches today (`{#key previewUrl}` remount, spinner overlay).
+- [x] Top app bar: back, Apply, Delete, Open ↗. (trailing slot in AppV2 for `routeMode === 'preview'`; also includes Ignore)
+- [x] Preview iframe behavior matches today (`{#key previewUrl}` remount, spinner overlay). ([src/ui-v2/components/PreviewView.svelte](src/ui-v2/components/PreviewView.svelte))
 
 ### Recovered / Replaced views
 
 - [x] Read-only list of bookmarks with `recovered-*` labels (Recovered) or `replaced-*` labels (Replaced). ([src/ui-v2/components/RecoveredView.svelte](src/ui-v2/components/RecoveredView.svelte), [src/ui-v2/components/ReplacedView.svelte](src/ui-v2/components/ReplacedView.svelte))
-- [ ] Cards use Triage List shape but no action icons and no tap action.
-- [ ] Add a label-filtered Readeck query path in [src/lib/api/readeck.js](src/lib/api/readeck.js).
+- [x] Cards use Triage List shape but no action icons and no tap action. ([src/ui-v2/components/BookmarkRow.svelte](src/ui-v2/components/BookmarkRow.svelte))
+- [x] Add a label-filtered Readeck query path in [src/lib/api/readeck.js](src/lib/api/readeck.js). (`getBookmarksByLabels`)
 
 ### Settings
 
@@ -71,11 +71,11 @@ Design intent in [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). Implementatio
 
 ### Scoring rewrite ([src/lib/scoring.js](src/lib/scoring.js))
 
-- [ ] **Archive.org** scoring (0–100): pre-create snapshots preferred; gentle decay with distance to `created` for pre-create, steeper decay for post-create; longevity bonus — snapshot count and span-years among pre-create snapshots lift the closest-to-create candidate's score.
-- [ ] Post-create snapshots only meaningfully scored when no pre-create snapshot exists.
-- [ ] **Brave Search** augmentation on top of current logic: publication-date proximity bonus (exact match strong, within-a-week mild); byline match bonus (when both sides expose author); same-registrable-domain bonus (ditto subdomain migrations like `500px.com` → `iso.500px.com`).
-- [ ] Output 0–100 on both sources so the Bookmark view can merge/interleave.
-- [ ] Tie-break order for interleave: pre-create archive snapshot > Brave result > post-create archive snapshot.
+- [x] **Archive.org** scoring (0–100): pre-create snapshots preferred; gentle decay with distance to `created` for pre-create, steeper decay for post-create; longevity bonus — snapshot count and span-years among pre-create snapshots lift the closest-to-create candidate's score. ([src/lib/scoring.js](src/lib/scoring.js))
+- [x] Post-create snapshots only meaningfully scored when no pre-create snapshot exists.
+- [x] **Brave Search** augmentation on top of current logic: publication-date proximity bonus (exact match strong, within-a-week mild); byline match bonus (when both sides expose author); same-registrable-domain bonus (ditto subdomain migrations like `500px.com` → `iso.500px.com`).
+- [x] Output 0–100 on both sources so the Bookmark view can merge/interleave.
+- [x] Tie-break order for interleave: pre-create archive snapshot > Brave result > post-create archive snapshot.
 
 ### Behavioral / cross-cutting
 

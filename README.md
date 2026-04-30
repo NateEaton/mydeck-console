@@ -67,11 +67,8 @@ The app has no server-side state of its own.
 1. Open the app and complete OAuth sign-in.
 2. The triage queue loads all bookmarks with `has_errors=true` that are not already archived.
 3. Select a bookmark. The app fetches archive.org snapshots (and Brave results if the `/brave/` proxy is configured) in parallel.
-4. For each archive snapshot, you get three actions:
-   - **Preview** — loads the candidate into the Preview tab (iframed; some sites block embedding, in which case use Open).
-   - **Open ↗** — opens the candidate in a new tab.
-   - **Apply** — runs the Clone / Replace / Deprecate sequence.
-5. If archive.org does not have what you want, try **More → Search** or **More → Manual**.
+4. Tap a candidate to open the Preview view. From there, use the top bar to **Apply** (✓), **Open ↗** in a new tab, or **Delete**.
+5. Brave Search results are shown alongside archive candidates automatically when `/brave/` is configured. For a specific URL, use the **⋮ overflow menu → Manual URL** from the Bookmark view.
 6. After apply, the bookmark disappears from the queue. The new bookmark lives in Readeck with inherited metadata and a `recovered-<source>` label; the original is archived (or deleted) with a matching `replaced-<source>` label.
 
 ---
@@ -111,7 +108,7 @@ Or run directly with explicit flags:
 
 ```
 ./build/mydeck-console \
-  --readeck-upstream "http://192.168.0.11:8080" \
+  --readeck-upstream "http://192.168.0.11:8888" \
   --listen "127.0.0.1:8889" \
   --brave-key "$BRAVE_API_KEY"
 ```
@@ -128,7 +125,7 @@ Optional flag: `--version`
    This runs a production SPA build, compiles the binary, and copies **the binary and the management scripts** to `BIN_INSTALL_DIR/` — a self-contained standalone install.
 3. Create a `.env` in `BIN_INSTALL_DIR` with your production config:
    ```
-   READECK_UPSTREAM=http://192.168.0.11:8080
+   READECK_UPSTREAM=http://192.168.0.11:8888
    BRAVE_API_KEY=your-key-here
    ```
    The scripts read config from the directory they live in, so no project checkout is needed at runtime.

@@ -12,14 +12,15 @@ redirects, missing content. It reads and writes against a running Readeck
 instance via the user's API token. The user is a Synology home-lab operator
 self-hosting Readeck in Docker.
 
-Phase 1 (the current shell) works end to end — triage queue, archive rediscovery,
-preview, Clone/Replace/Deprecate — but it's a smoketest shell and won't be put
-in front of testers. The next major change is the Phase 1.5 UI/UX refactor
-([docs/refactor-ui-ux.md](docs/refactor-ui-ux.md)), which runs **before** the
-Go single-binary migration and the first tester release. See
-[docs/spec.md](docs/spec.md) for the full Phase 1 spec, [TODO.md](TODO.md) for
-what's outstanding, and [docs/go-migration.md](docs/go-migration.md) for the
-binary work that follows the refactor.
+The Phase 1.5 UI/UX refactor is largely complete — the shell redesign (hamburger
+drawer, Bookmark/Preview views, unified candidate list, scoring rewrite,
+Recovered/Replaced/Ignored views, OAuth PKCE) is done. The Go single-binary
+runtime scaffold is also done (`cmd/`, `internal/`). Remaining work before the
+first tester release: a few deferred UX items (Brave key in Settings, persist
+repair state), Go tests, cross-compile, and GitHub Actions release workflow. See
+[docs/spec.md](docs/spec.md) for the full spec, [TODO.md](TODO.md) for the
+outstanding checklist, and [docs/go-migration.md](docs/go-migration.md) for the
+binary work.
 
 ## Ground rules
 
@@ -77,9 +78,15 @@ only ever speaks to relative paths. Two reasons this matters:
 | [src/lib/readeckErrors.js](src/lib/readeckErrors.js) | Classifier over the extraction-log text → typed error for the BookmarkView header. |
 | [src/lib/config.js](src/lib/config.js)           | Label constants, cache TTL. **No secrets.**          |
 | [vite.config.js](vite.config.js)                 | Dev-server proxy config for `/api`, `/cdx`, `/brave` |
-| [nginx/*.conf.template](nginx/)                  | Prod reverse-proxy templates, rendered by render-nginx.sh |
-| [render-nginx.sh](render-nginx.sh)               | Envsubst (or sed fallback) renderer driven by `.env` |
+| [nginx/*.conf.template](nginx/)                  | Prod reverse-proxy templates, rendered by render-nginx.sh (to be retired) |
+| [render-nginx.sh](render-nginx.sh)               | Envsubst (or sed fallback) renderer driven by `.env` (to be retired) |
 | [.env.example](.env.example)                     | Shows `READECK_UPSTREAM`, `BRAVE_API_KEY`, deploy dirs |
+| [cmd/mydeck-console/main.go](cmd/mydeck-console/main.go) | Go binary entry point: flag parsing, server startup, graceful shutdown |
+| [internal/server/](internal/server/)             | `server.go` (http.Server), `routes.go` (route table), `static.go` (SPA fallback) |
+| [internal/proxy/](internal/proxy/)               | `readeck.go`, `archive.go`, `brave.go` — three `httputil.ReverseProxy` handlers |
+| [internal/config/config.go](internal/config/config.go) | CLI flags + env fallback (`--listen`, `--readeck-upstream`, `--brave-key`) |
+| [deploy.sh](deploy.sh)                           | Build + deploy script; `binary-prod` mode builds the Go binary |
+| [scripts/](scripts/)                             | `start-prod.sh`, `stop-prod.sh`, `status-prod.sh`, `run-instance.sh` |
 
 The nginx templates and `render-nginx.sh` will be retired when the Go migration
 lands — see [docs/go-migration.md](docs/go-migration.md).
@@ -153,13 +160,13 @@ is **do not spawn sub-agents**. When they do help:
 - **Bad cases:** tight iterative work, anything where Opus-level reasoning is
   load-bearing, anything that would benefit from seeing the user's reactions.
 
-## What's next (as of 2026-04-27)
+## What's next (as of 2026-04-29)
 
 1. ~~**Phase 1 verification:** confirm Brave Search works end-to-end.~~ Done.
-2. **Phase 1.5 UX refactor** — [docs/refactor-ui-ux.md](docs/refactor-ui-ux.md). **Active.**
-   Shell redesign (hamburger drawer, Bookmark/Preview views, unified candidate
-   list with per-source skeletons, scoring rewrite, Recovered/Replaced views).
-   User Guide and About views are done; remaining work is in [TODO.md](TODO.md).
+2. ~~**Phase 1.5 UX refactor**~~ Largely done. Shell redesign, Bookmark/Preview
+   views, unified candidate list, scoring rewrite, Recovered/Replaced/Ignored
+   views, OAuth PKCE, User Guide, About — all complete. Remaining deferred items:
+   Brave Search API key in Settings, persist in-flight repair state. See [TODO.md](TODO.md).
 3. **Go single-binary migration** — [docs/go-migration.md](docs/go-migration.md). **Runtime scaffold done.**
    `cmd/`, `internal/server`, `internal/proxy`, `internal/config` are implemented.
    Remaining: tests, cross-compile, GitHub Actions workflow, nginx retirement.
