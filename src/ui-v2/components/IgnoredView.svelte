@@ -3,8 +3,10 @@
   import BookmarkRow from './BookmarkRow.svelte';
   import { MdiArrowLeft } from '../icons/index.js';
   import { getIgnoredIds, getBookmark, unignoreBookmark, unignoreAll } from '../../lib/cache';
+  import { compareBookmarks, DEFAULT_SORT } from '../../lib/sort.js';
 
   export let client;
+  export let sortOption = DEFAULT_SORT;
 
   const dispatch = createEventDispatcher();
 
@@ -43,12 +45,13 @@
         await unignoreBookmark(id);
       }
 
-      const merged = [...cached, ...fetched];
-      bookmarks = merged.sort((a, b) => (Date.parse(b.created) || 0) - (Date.parse(a.created) || 0));
+      bookmarks = [...cached, ...fetched];
     } finally {
       loading = false;
     }
   }
+
+  $: sortedBookmarks = [...bookmarks].sort((a, b) => compareBookmarks(a, b, sortOption));
 
   async function onUnignore(id) {
     await unignoreBookmark(id);
@@ -79,7 +82,7 @@
       <button class="btn danger" on:click={onClearAll}>Clear all</button>
     </div>
     <div class="list">
-      {#each bookmarks as b (b.id)}
+      {#each sortedBookmarks as b (b.id)}
         <BookmarkRow bookmark={b} highlightedLabels={[]}>
           <button class="unignore-btn" on:click={() => onUnignore(b.id)} title="Un-ignore" aria-label="Un-ignore bookmark">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

@@ -7,8 +7,10 @@
     RECOVERY_LABEL_SEARCH,
     RECOVERY_LABEL_MANUAL,
   } from '../../lib/config';
+  import { compareBookmarks, DEFAULT_SORT } from '../../lib/sort.js';
 
   export let client;
+  export let sortOption = DEFAULT_SORT;
 
   const RECOVERY_LABELS = [RECOVERY_LABEL_ARCHIVE, RECOVERY_LABEL_SEARCH, RECOVERY_LABEL_MANUAL];
 
@@ -20,14 +22,15 @@
     loading = true;
     error = null;
     try {
-      const raw = await client.getBookmarksByLabels(RECOVERY_LABELS);
-      bookmarks = raw.sort((a, b) => (Date.parse(b.created) || 0) - (Date.parse(a.created) || 0));
+      bookmarks = await client.getBookmarksByLabels(RECOVERY_LABELS);
     } catch (e) {
       error = e.message || 'Failed to load recovered bookmarks.';
     } finally {
       loading = false;
     }
   }
+
+  $: sortedBookmarks = [...bookmarks].sort((a, b) => compareBookmarks(a, b, sortOption));
 
   onMount(load);
 </script>
@@ -53,7 +56,7 @@
     <div class="empty">No recovered bookmarks yet.</div>
   {:else}
     <div class="list">
-      {#each bookmarks as b (b.id)}
+      {#each sortedBookmarks as b (b.id)}
         <BookmarkRow bookmark={b} highlightedLabels={RECOVERY_LABELS} />
       {/each}
     </div>

@@ -39,6 +39,7 @@
   import IgnoredView from './components/IgnoredView.svelte';
   import UserGuideView from './components/UserGuideView.svelte';
   import AboutView from './components/AboutView.svelte';
+  import SortMenu from './components/SortMenu.svelte';
 
   import {
     MdiDotsVertical,
@@ -48,6 +49,8 @@
     MdiWeb,
     MdiEyeOff,
   } from './icons/index.js';
+
+  import { compareBookmarks, loadSortOption, saveSortOption } from '../lib/sort.js';
 
   const WIDE_MIN = 768;
   const REPAIR_STATE_KEY = 'repair_state';
@@ -99,6 +102,7 @@
   let bookmarks = [];
   let loading = false;
   let activeView = 'triage';
+  let sortOption = loadSortOption();
   let ignoredIds = new Set();
   // Counts shown as pills on the nav drawer. Triage and Ignored are derived
   // reactively below; Recovered / Replaced are fetched lazily.
@@ -139,7 +143,10 @@
   $: merged = mergeCandidates(archiveScored, braveScored);
   $: sortedBookmarks = [...bookmarks]
     .filter(b => !ignoredIds.has(b.id))
-    .sort((a, b) => (Date.parse(b?.created) || 0) - (Date.parse(a?.created) || 0));
+    .sort((a, b) => compareBookmarks(a, b, sortOption));
+  $: isListView = activeView === 'triage' || activeView === 'recovered'
+                || activeView === 'replaced' || activeView === 'ignored';
+  $: saveSortOption(sortOption);
   $: navCounts = {
     triage: sortedBookmarks.length,
     recovered: recoveredCount,
@@ -717,6 +724,9 @@
       on:back={onBack}
     >
       <svelte:fragment slot="trailing">
+        {#if routeMode === 'drawer' && isListView && apiToken}
+          <SortMenu value={sortOption} on:change={(e) => sortOption = e.detail.value} />
+        {/if}
         {#if routeMode === 'bookmark'}
           <button class="bar-icon" on:click={previewOriginal} title="Preview original URL" aria-label="Preview original URL">
             <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
@@ -805,12 +815,13 @@
           on:sign-out={onSignOut}
         />
       {:else if activeView === 'recovered'}
-        <RecoveredView {client} />
+        <RecoveredView {client} {sortOption} />
       {:else if activeView === 'replaced'}
-        <ReplacedView {client} />
+        <ReplacedView {client} {sortOption} />
       {:else if activeView === 'ignored'}
         <IgnoredView
           {client}
+          {sortOption}
           on:unignored={onUnignored}
           on:unignored-all={onUnignoredAll}
         />
