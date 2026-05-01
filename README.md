@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/NateEaton/mydeck-console)](https://github.com/NateEaton/mydeck-console/releases/latest)
 
-A companion app for [Readeck](https://readeck.org/) (and [MyDeck](https://github.com/NateEaton/mydeck-android), an Android Readeck client) that helps you triage and repair broken bookmarks — the ones that accumulate after a bulk import from Pocket or a few years of link rot.
+A companion app for [Readeck](https://readeck.org/) (and [MyDeck](https://nateeaton.github.io/mydeck-android), an Android Readeck client) that helps you triage and repair broken bookmarks — the ones that accumulate after a bulk import from Pocket or a few years of link rot.
 
 For each broken bookmark, MyDeck Console offers:
 
