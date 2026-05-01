@@ -54,14 +54,17 @@ Apply uses **Clone, Replace, Deprecate**:
 
 Source-specific labels are applied automatically during repair to make lineage easy to audit in Readeck.
 
-| Label | Applied to | Meaning |
-|---|---|---|
-| `recovered-archive.org` | new bookmark | Replacement came from an Internet Archive snapshot |
-| `recovered-search` | new bookmark | Replacement came from Brave Search |
-| `recovered-manual` | new bookmark | Replacement URL was entered manually |
-| `replaced-archive.org` | original bookmark | Deprecated by an archive replacement |
-| `replaced-search` | original bookmark | Deprecated by a search replacement |
-| `replaced-manual` | original bookmark | Deprecated by a manual replacement |
+**Labels on the new bookmark** (the replacement):
+
+- `recovered-archive.org` — replacement came from an Internet Archive snapshot
+- `recovered-search` — replacement came from Brave Search
+- `recovered-manual` — replacement URL was entered manually
+
+**Labels on the original bookmark** (the deprecated one):
+
+- `replaced-archive.org` — deprecated by an archive replacement
+- `replaced-search` — deprecated by a search replacement
+- `replaced-manual` — deprecated by a manual replacement
 
 ## Recovered and Replaced views
 
@@ -75,7 +78,7 @@ These views are for review and audit. Cards show the same information as Triage 
 Bookmarks you have chosen to skip appear in the **Ignored** view. From here you can:
 
 - **Un-ignore** an individual bookmark to return it to the Triage queue.
-- **Clear all ignored** to return everything at once (available in Settings → Ignored).
+- **Clear all** (button at the top of the view) to return all ignored bookmarks to Triage at once.
 
 Ignored state is stored locally in the browser (IndexedDB) — it does not affect the bookmark in Readeck.
 
@@ -100,9 +103,9 @@ The four list views — **Triage**, **Recovered**, **Replaced**, and **Ignored**
 
 ## Settings
 
+- **Account** — shows your signed-in Readeck server and sign-out option.
 - **Action on Apply** — sets the default disposition when repairing: Archive (default) or Delete.
 - **App theme** — Light, Dark, or System.
-- **Account** — shows your signed-in Readeck server and sign-out option.
 
 ## Troubleshooting
 
