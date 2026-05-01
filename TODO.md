@@ -101,9 +101,9 @@ Full plan in [docs/go-migration.md](docs/go-migration.md). Runtime scaffold is c
 - [x] Three `httputil.ReverseProxy` handlers. `/brave/` injects `X-Subscription-Token` via `Director`.
 - [x] CLI flags + env defaults (`--listen`, `--readeck-upstream`, `--brave-key`). Fail fast on missing upstream.
 - [x] Graceful shutdown, 120s `/cdx/` timeout, correct Host/SNI for archive.org.
-- [ ] Tests: SPA fallback, Brave header injection, missing-upstream error.
-- [ ] Cross-compile for linux/amd64, linux/arm64, darwin, windows.
-- [ ] GitHub Actions release workflow: `npm ci && npm run build && go build`, attach platform binaries to each tag.
+- [x] Tests: SPA fallback, Brave header injection, missing-upstream error.
+- [x] Cross-compile for linux/amd64, linux/arm64, darwin, windows (`make build-all`; `Makefile` and `release.yml`).
+- [x] GitHub Actions release workflow: `checks.yml`, `continuous.yml`, `release.yml`.
 - [x] Retire `nginx/*.conf.template`, `render-nginx.sh`, and `deploy.sh` from the public repo (gitignored; local copy kept in `docs/nginx-synology.md`). `Makefile` added as public build entrypoint.
 
 ---

@@ -1,0 +1,73 @@
+name: Continuous Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Get version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Build SPA
+        run: npm ci && npm run build
+
+      - name: Sync web assets into embed dir
+        run: |
+          find cmd/mydeck-console/web -mindepth 1 ! -name '.keep' -delete
+          cp -r dist/. cmd/mydeck-console/web/
+
+      - name: Build all platform binaries
+        env:
+          VERSION: v${{ steps.version.outputs.version }}-dev
+        run: |
+          mkdir -p build
+          LDFLAGS="-s -w -X main.version=${VERSION}"
+          CGO_ENABLED=0 GOOS=linux   GOARCH=amd64  go build -ldflags "$LDFLAGS" -o build/mydeck-console-linux-amd64     ./cmd/mydeck-console
+          CGO_ENABLED=0 GOOS=linux   GOARCH=arm64  go build -ldflags "$LDFLAGS" -o build/mydeck-console-linux-arm64     ./cmd/mydeck-console
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64  go build -ldflags "$LDFLAGS" -o build/mydeck-console-darwin-amd64    ./cmd/mydeck-console
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64  go build -ldflags "$LDFLAGS" -o build/mydeck-console-darwin-arm64    ./cmd/mydeck-console
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64  go build -ldflags "$LDFLAGS" -o build/mydeck-console-windows-amd64.exe ./cmd/mydeck-console
+          cd build && sha256sum mydeck-console-* > SHA256SUMS
+
+      - name: Update latest-build tag
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git tag -f latest-build ${{ github.sha }}
+          git push -f origin latest-build
+
+      - name: Update rolling release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest-build --yes 2>/dev/null || true
+          gh release create latest-build \
+            --prerelease \
+            --title "Latest Build" \
+            --notes "Automated build from \`main\` — commit \`${{ github.sha }}\`.
+
+          Not a stable release. Download a tagged release for tester builds." \
+            build/*

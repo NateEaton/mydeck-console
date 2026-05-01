@@ -1,0 +1,52 @@
+name: Checks
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'enhancement/**'
+      - 'fix/**'
+      - 'chore/**'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Build SPA
+        run: npm run build
+
+      - name: Sync web assets into embed dir
+        run: |
+          find cmd/mydeck-console/web -mindepth 1 ! -name '.keep' -delete
+          cp -r dist/. cmd/mydeck-console/web/
+
+      - name: Go build
+        run: go build ./cmd/mydeck-console
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Go test
+        run: go test ./...
