@@ -1,6 +1,6 @@
 # Distribution Spec — Tester Release
 
-**Status:** Draft — assumes the Go single-binary migration in [go-migration.md](go-migration.md) has landed. Supersedes the earlier nginx-hosted plan.
+**Status:** Current. The Go single-binary migration has landed. Supersedes the earlier nginx-hosted plan.
 **Audience:** A small group of existing MyDeck / Readeck self-hosters willing to help test repair workflows.
 **Explicit non-goal:** Production-grade release. No multi-user auth, no hardened defaults, no public signup flow.
 
@@ -17,7 +17,7 @@
 
 - Multi-arch builds beyond what GitHub Actions gives for free (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`).
 - Signed binaries/images, SBOMs, supply-chain hardening.
-- Automatic Readeck discovery or OAuth — testers paste an API token like today.
+- Automatic Readeck discovery. Authentication uses OAuth 2.0 PKCE — testers sign in through the in-app OAuth flow.
 - Persisted per-user server-side state. The binary is stateless; the SPA uses IndexedDB + localStorage in the browser.
 
 ---

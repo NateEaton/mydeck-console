@@ -1,6 +1,6 @@
 # Sort — list views
 
-**Status:** Draft spec. Not implemented yet.
+**Status:** Implemented.
 
 Adds a sort control to every drawer list view. Modeled directly on MyDeck
 (Android) — see `mydeck-android/app/src/main/java/com/mydeck/app/ui/list/BookmarkListScreen.kt`

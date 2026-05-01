@@ -1,6 +1,6 @@
 # Filter — list views
 
-**Status:** Draft spec. Not implemented yet.
+**Status:** Implemented.
 
 Adds an in-list filter to every drawer list view. Modeled on MyDeck (Android) —
 see `mydeck-android/app/src/main/java/com/mydeck/app/ui/components/FilterBottomSheet.kt`,

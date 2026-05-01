@@ -161,11 +161,8 @@ is **do not spawn sub-agents**. When they do help:
    views, unified candidate list, scoring rewrite, Recovered/Replaced/Ignored
    views, OAuth PKCE, User Guide, About — all complete. Remaining deferred items:
    Brave Search API key in Settings, persist in-flight repair state. See [TODO.md](TODO.md).
-3. **Go single-binary migration** — [docs/go-migration.md](docs/go-migration.md). **Runtime scaffold done.**
-   `cmd/`, `internal/server`, `internal/proxy`, `internal/config` are implemented.
-   nginx templates and deploy.sh are gitignored; Makefile added.
-   Remaining: tests, cross-compile, GitHub Actions release workflow.
-   The full refactored SPA will be embedded before the tester release.
+3. ~~**Go single-binary migration**~~ Complete. Binary, tests, Makefile, GitHub Actions
+   (`checks.yml`, `continuous.yml`, `release.yml`) all done. nginx/deploy.sh gitignored.
 4. First tester release off the binary.
 5. Conditional follow-ups: advanced HTML injection, SearXNG, capture-selection
    — only if tester feedback warrants.
