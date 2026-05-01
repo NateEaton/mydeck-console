@@ -3,6 +3,8 @@
   import { fetchServerInfo, startSignIn, defaultRedirectUri } from '../../lib/api/oauth';
   import { MdiAlertCircle } from '../icons/index.js';
 
+  const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+
   export let initialUrl = '';
   export let initialError = '';
 
@@ -54,6 +56,14 @@
 
 <div class="signin">
   <div class="card">
+    <div class="brand-header">
+      <img src="{import.meta.env.BASE_URL}icon-192.png" alt="" width="72" height="72" class="brand-icon-img" />
+      <div class="brand-divider" aria-hidden="true"></div>
+      <div class="brand-text">
+        <div class="brand-name">MyDeck Console</div>
+        <div class="version">Version {APP_VERSION}</div>
+      </div>
+    </div>
     <h2>Sign in to Readeck</h2>
     <p class="lead">
       Enter your Readeck server URL. You'll be redirected to Readeck to log in
@@ -106,6 +116,38 @@
     border-radius: var(--md-sys-radius-medium);
     padding: 28px 28px 24px;
     box-sizing: border-box;
+  }
+  .brand-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .brand-icon-img {
+    border-radius: 16px;
+    flex-shrink: 0;
+  }
+  .brand-divider {
+    width: 1px;
+    height: 52px;
+    background: var(--md-sys-color-outline);
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .brand-name {
+    font-size: 1.35rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--md-sys-color-on-surface);
+  }
+  .version {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.9rem;
   }
   h2 {
     margin: 0 0 6px;
