@@ -48,9 +48,9 @@ The key is injected server-side by the `/brave/` proxy and never enters the SPA 
 
 ### 3. Deployment options
 
-**Legacy path (still supported):** nginx-hosted SPA from `dist/` with proxy rules for `/api/`, `/cdx/`, and `/brave/`.
+**Go binary (primary):** single `mydeck-console` executable embedding the SPA. Handles all three proxy routes directly — no other runtime dependencies. Optionally front with any TLS-terminating reverse proxy.
 
-**Go path (in progress, current migration target):** single `mydeck-console` executable embedding SPA assets and handling `/api`, `/cdx`, `/brave` proxy routes directly. See [docs/go-migration.md](docs/go-migration.md).
+**SPA-only path:** if you already have a web server that can provide the three proxy routes, build the SPA with `make spa` and serve the `dist/` directory from it.
 
 Both paths require the same logical routes:
 
@@ -93,7 +93,7 @@ Outputs to `dist/`.
 SPA development uses `npm run dev` (Vite, no binary needed). To test the binary itself locally, build with:
 
 ```
-./deploy.sh binary-prod
+make build
 ```
 
 The binary lands at `./build/mydeck-console`. Run it via the scripts:
@@ -117,39 +117,32 @@ Optional flag: `--version`
 
 ## Production deployment (Go binary)
 
-1. Set `BIN_INSTALL_DIR` in your project `.env` to a stable directory outside the web root (e.g. `/volume1/homes/Nathan/apps/mydeck-console`).
-2. Build and install:
+1. Build the binary:
    ```
-   ./deploy.sh binary-prod
+   make build
    ```
-   This runs a production SPA build, compiles the binary, and copies **the binary and the management scripts** to `BIN_INSTALL_DIR/` — a self-contained standalone install.
-3. Create a `.env` in `BIN_INSTALL_DIR` with your production config:
+   The binary lands at `./build/mydeck-console`.
+
+2. Copy the binary to a stable location. In the same directory, create a `.env`:
    ```
    READECK_UPSTREAM=http://192.168.0.11:8888
    BRAVE_API_KEY=your-key-here
    ```
-   The scripts read config from the directory they live in, so no project checkout is needed at runtime.
-4. Start (from the install directory or anywhere):
-   ```
-   /volume1/homes/Nathan/apps/mydeck-console/start-prod.sh   # listens on 127.0.0.1:8890
-   ```
-5. Stop / status:
-   ```
-   /volume1/homes/Nathan/apps/mydeck-console/stop-prod.sh
-   /volume1/homes/Nathan/apps/mydeck-console/status-prod.sh
-   ```
-6. If nginx fronts the binary (optional, for HTTPS termination):
-   ```nginx
-   location / {
-       proxy_pass http://127.0.0.1:8890;
-   }
-   ```
-7. To auto-start on boot (Synology): add a Task Scheduler triggered task (Boot-up) that runs `/volume1/homes/Nathan/apps/mydeck-console/start-prod.sh`.
 
-Deploy script mode reference:
+3. Run directly, or copy the [`scripts/`](scripts/) bash helpers alongside the binary and use those:
+   ```
+   # Direct
+   ./mydeck-console --readeck-upstream http://192.168.0.11:8888 --listen :8890
 
-- `./deploy.sh dev|prod|test` — legacy nginx-hosted SPA flow
-- `./deploy.sh binary-prod` — Go single-binary flow (build + install)
+   # Via scripts (read config from .env in the same directory)
+   ./start-prod.sh    # listens on 127.0.0.1:8890
+   ./stop-prod.sh
+   ./status-prod.sh
+   ```
+
+4. Optional — reverse proxy for TLS: point any TLS-terminating proxy at the binary's port. No special headers required.
+
+5. Auto-start on boot: add the binary (or `start-prod.sh`) to your system's init mechanism.
 
 ---
 

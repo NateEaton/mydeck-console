@@ -21,8 +21,11 @@ cmd/mydeck-console/web/*
 .env.local
 .env.*.local
 
-# Rendered nginx configs (produced from .conf.template via render-nginx.sh)
-nginx/*.conf
+# Local tooling and Synology-specific configs — not useful to adopters
+nginx/
+render-nginx.sh
+deploy.sh
+docs/nginx-synology.md
 
 # Editor directories and files
 .vscode/*

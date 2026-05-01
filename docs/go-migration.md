@@ -1,6 +1,6 @@
 # Go Single-Binary Migration
 
-**Status:** In progress — runtime scaffold complete (see `cmd/mydeck-console/`, `internal/`). Remaining: tests, cross-compile, GitHub Actions release workflow, nginx retirement. The full UX build will be embedded before the tester release; individual pieces may be tested earlier via `./deploy.sh binary-dev`.
+**Status:** In progress — runtime scaffold complete (see `cmd/mydeck-console/`, `internal/`). nginx templates and `deploy.sh` are gitignored; `Makefile` added. Remaining: tests, cross-compile, GitHub Actions release workflow. The full UX build will be embedded before the tester release.
 **Motivation:** Replace the SPA-plus-nginx deployment with a single `mydeck-console` binary that embeds the built frontend and serves it alongside the three upstream proxies. Testers would get one file to download, run, and forget.
 
 This is **not** the original Phase 2 vision (Go backend + batch orchestration). That has been dropped. See [spec.md §11](spec.md#11-phase-2-enhancements-roadmap) — it needs revising; batch auto-apply turned out to be unrealistic once you accept that review is inherent to the repair task.
@@ -79,7 +79,8 @@ All three flags also readable from env (`LISTEN`, `READECK_UPSTREAM`, `BRAVE_API
 6. Graceful shutdown on SIGINT/SIGTERM.
 7. `go test` covering: SPA fallback logic, header injection on `/brave/`, missing-upstream failure.
 8. Cross-compile smoke test: `GOOS=linux GOARCH=amd64`, `GOOS=linux GOARCH=arm64`, `GOOS=darwin`, `GOOS=windows`.
-9. GitHub Actions workflow that runs `npm ci && npm run build && go build` and attaches platform binaries to each tag's release.
+9. GitHub Actions workflow that runs `npm ci && npm run build && go build` and attaches platform binaries to each tag's release. (`Makefile` `build-all` target is the local equivalent.)
+10. Retire `nginx/*.conf.template`, `render-nginx.sh`, `deploy.sh` from the public repo. ✓ Done — gitignored; local reference kept in `docs/nginx-synology.md`.
 
 ---
 

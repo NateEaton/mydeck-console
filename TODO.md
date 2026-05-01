@@ -104,7 +104,7 @@ Full plan in [docs/go-migration.md](docs/go-migration.md). Runtime scaffold is c
 - [ ] Tests: SPA fallback, Brave header injection, missing-upstream error.
 - [ ] Cross-compile for linux/amd64, linux/arm64, darwin, windows.
 - [ ] GitHub Actions release workflow: `npm ci && npm run build && go build`, attach platform binaries to each tag.
-- [ ] Retire `nginx/*.conf.template`, `render-nginx.sh`, and the nginx container from docs and repo.
+- [x] Retire `nginx/*.conf.template`, `render-nginx.sh`, and `deploy.sh` from the public repo (gitignored; local copy kept in `docs/nginx-synology.md`). `Makefile` added as public build entrypoint.
 
 ---
 

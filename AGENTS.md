@@ -31,8 +31,7 @@ These are non-negotiable unless the user explicitly lifts them for a task:
    git (`git status`, `git log`, `git diff`) is fine.
 2. **The user handles all app builds and deploys.** Do not run `npm run build`,
    `npm run dev` (except to type-check a change via the user's running process),
-   `./deploy.sh`, or `./render-nginx.sh`. Edit the files and tell the user what
-   to run.
+   `make build`, or `./deploy.sh`. Edit the files and tell the user what to run.
 3. **Never commit secrets.** `BRAVE_API_KEY` lives in `.env` (gitignored) and
    gets injected server-side by the `/brave/` proxy. It must never appear in
    client code, bundled output, or committed configs. If you see it in
@@ -48,7 +47,7 @@ These are non-negotiable unless the user explicitly lifts them for a task:
 Browser (Svelte SPA)
     │
     ▼  same-origin requests only
-nginx (today)  OR  Go binary (planned — see docs/go-migration.md)
+Go binary  (see cmd/mydeck-console/, internal/)
     │
     ├── /api/     → Readeck upstream (user's own instance)
     ├── /cdx/     → web.archive.org (CDX API; 120s timeout, no CORS upstream)
@@ -78,18 +77,13 @@ only ever speaks to relative paths. Two reasons this matters:
 | [src/lib/readeckErrors.js](src/lib/readeckErrors.js) | Classifier over the extraction-log text → typed error for the BookmarkView header. |
 | [src/lib/config.js](src/lib/config.js)           | Label constants, cache TTL. **No secrets.**          |
 | [vite.config.js](vite.config.js)                 | Dev-server proxy config for `/api`, `/cdx`, `/brave` |
-| [nginx/*.conf.template](nginx/)                  | Prod reverse-proxy templates, rendered by render-nginx.sh (to be retired) |
-| [render-nginx.sh](render-nginx.sh)               | Envsubst (or sed fallback) renderer driven by `.env` (to be retired) |
-| [.env.example](.env.example)                     | Shows `READECK_UPSTREAM`, `BRAVE_API_KEY`, deploy dirs |
+| [.env.example](.env.example)                     | Shows `READECK_UPSTREAM`, `BRAVE_API_KEY` |
 | [cmd/mydeck-console/main.go](cmd/mydeck-console/main.go) | Go binary entry point: flag parsing, server startup, graceful shutdown |
 | [internal/server/](internal/server/)             | `server.go` (http.Server), `routes.go` (route table), `static.go` (SPA fallback) |
 | [internal/proxy/](internal/proxy/)               | `readeck.go`, `archive.go`, `brave.go` — three `httputil.ReverseProxy` handlers |
 | [internal/config/config.go](internal/config/config.go) | CLI flags + env fallback (`--listen`, `--readeck-upstream`, `--brave-key`) |
-| [deploy.sh](deploy.sh)                           | Build + deploy script; `binary-prod` mode builds the Go binary |
+| [Makefile](Makefile)                             | `spa`, `build`, `build-all`, `run-dev`, `clean` — local builds and CI cross-compile |
 | [scripts/](scripts/)                             | `start-prod.sh`, `stop-prod.sh`, `status-prod.sh`, `run-instance.sh` |
-
-The nginx templates and `render-nginx.sh` will be retired when the Go migration
-lands — see [docs/go-migration.md](docs/go-migration.md).
 
 ## Conventions learned the hard way
 
@@ -134,10 +128,10 @@ Write these down and don't re-discover them:
 
 ## Common tasks — how to approach them
 
-- **Add a new proxy route.** Add it to `vite.config.js` for dev, add a
-  `location` block to both `nginx/*.conf.template` files for prod, and update
-  `docs/go-migration.md` routes list. Use the existing `/brave/` block as the
-  template for header injection.
+- **Add a new proxy route.** Add it to `vite.config.js` for dev and to
+  `internal/server/routes.go` + the appropriate `internal/proxy/` handler for
+  the Go binary. Use the existing `/brave/` handler as the template for header
+  injection.
 - **Change the label taxonomy.** Edit `src/lib/config.js` constants and the
   carry-forward filter in `src/lib/api/readeck.js`. Update
   [docs/spec.md](docs/spec.md).
@@ -169,7 +163,8 @@ is **do not spawn sub-agents**. When they do help:
    Brave Search API key in Settings, persist in-flight repair state. See [TODO.md](TODO.md).
 3. **Go single-binary migration** — [docs/go-migration.md](docs/go-migration.md). **Runtime scaffold done.**
    `cmd/`, `internal/server`, `internal/proxy`, `internal/config` are implemented.
-   Remaining: tests, cross-compile, GitHub Actions workflow, nginx retirement.
+   nginx templates and deploy.sh are gitignored; Makefile added.
+   Remaining: tests, cross-compile, GitHub Actions release workflow.
    The full refactored SPA will be embedded before the tester release.
 4. First tester release off the binary.
 5. Conditional follow-ups: advanced HTML injection, SearXNG, capture-selection

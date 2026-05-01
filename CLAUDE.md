@@ -11,7 +11,7 @@ From AGENTS.md, do not forget:
 - **Git writes are the user's job.** No `git commit`, `git push`, `git add`,
   or destructive git. Read-only git is fine.
 - **Builds and deploys are the user's job.** No `npm run build`, no
-  `./deploy.sh`, no `./render-nginx.sh`.
+  `make build`, no `./deploy.sh`.
 - **No secrets in tracked files.** `BRAVE_API_KEY` lives only in `.env` and
   gets injected by the `/brave/` proxy.
 
