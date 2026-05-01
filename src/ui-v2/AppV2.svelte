@@ -134,7 +134,7 @@
   let drawerOpen = false;
 
   let selectedBookmark = _initialRepair?.bookmark || null;
-  let selectedCandidate = _initialRepair?.candidate || null;
+  let selectedCandidate = null;
   let loadToken = 0;
   let archiveScored = _initialRepair?.archiveScored ||[];
   let braveScored = _initialRepair?.braveScored ||[];
@@ -201,7 +201,6 @@
     if (selectedBookmark) {
       sessionStorage.setItem(REPAIR_STATE_KEY, JSON.stringify({
         bookmark: selectedBookmark,
-        candidate: selectedCandidate,
         archiveScored,
         braveScored,
       }));
@@ -252,6 +251,21 @@
       replacedCount = p;
     } catch (e) {
       console.warn('label count refresh failed:', e);
+    }
+  }
+
+  function onScrollToTop() {
+    contentEl?.scrollTo({ top: 0, behavior: 'smooth' });
+    if (routeMode === 'preview') {
+      const iframe = contentEl?.querySelector('iframe');
+      if (iframe?.src) {
+        try {
+          iframe.contentWindow.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (_) {
+          // cross-origin: reload iframe to its URL, which lands at page top
+          iframe.src = iframe.src;
+        }
+      }
     }
   }
 
@@ -771,6 +785,7 @@
       {showBack}
       on:menu-toggle={onMenuToggle}
       on:back={onBack}
+      on:title-tap={onScrollToTop}
     >
       <svelte:fragment slot="trailing">
         {#if routeMode === 'drawer' && isListView && apiToken}
@@ -1042,7 +1057,7 @@
   .bar-icon:hover { background: var(--bg-hover); }
 
   .fab {
-    position: absolute;
+    position: fixed;
     right: 20px;
     bottom: 20px;
     width: 56px;

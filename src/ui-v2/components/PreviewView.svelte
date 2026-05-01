@@ -30,6 +30,7 @@
       <iframe
         src={previewUrl}
         title="Preview"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         on:load={onLoad}
       ></iframe>
     {/key}

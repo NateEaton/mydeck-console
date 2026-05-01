@@ -23,7 +23,8 @@
       </svg>
     </button>
   {/if}
-  <h1 class="title">{title}</h1>
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+  <h1 class="title" on:click={() => dispatch('title-tap')}>{title}</h1>
   <div class="trailing">
     <slot name="trailing" />
   </div>
@@ -63,6 +64,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
   }
   .trailing {
     display: flex;
