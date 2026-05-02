@@ -33,7 +33,7 @@ export class ReadeckClient {
             'Accept': 'application/json',
             ...options.headers,
         };
-        const response = await fetch(url, { ...options, headers });
+        const response = await fetch(url, { cache: 'no-store', ...options, headers });
         if (!response.ok) {
             const text = await response.text().catch(() => '');
             let message = response.statusText;
