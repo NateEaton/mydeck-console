@@ -10,6 +10,18 @@
  */
 
 const PAGE_LIMIT = 100;
+const REPAIR_SETTLE_TIMEOUT_MS = 120 * 1000;
+const REPAIR_SETTLE_INTERVAL_MS = 1500;
+
+export class ReadeckRepairError extends Error {
+    constructor(message, options = {}) {
+        super(message);
+        this.name = 'ReadeckRepairError';
+        this.replacement = options.replacement || null;
+        this.log = options.log || '';
+        this.cause = options.cause;
+    }
+}
 
 export class ReadeckClient {
     constructor(baseUrl = '', apiToken = '') {
@@ -121,6 +133,32 @@ export class ReadeckClient {
         if (!id) throw new Error('deleteBookmark called without id');
         return this.request(`/api/bookmarks/${id}`, {
             method: 'DELETE',
+        });
+    }
+
+    async waitForBookmarkSettled(id, options = {}) {
+        if (!id) throw new Error('waitForBookmarkSettled called without id');
+        const {
+            timeoutMs = REPAIR_SETTLE_TIMEOUT_MS,
+            intervalMs = REPAIR_SETTLE_INTERVAL_MS,
+            onProgress,
+        } = options;
+
+        const startedAt = Date.now();
+        let last = null;
+        while (Date.now() - startedAt <= timeoutMs) {
+            last = await this.getBookmark(id);
+            onProgress?.({
+                bookmark: last,
+                elapsedMs: Date.now() - startedAt,
+            });
+
+            if (isBookmarkSettled(last)) return last;
+            await sleep(intervalMs);
+        }
+
+        throw new ReadeckRepairError('Timed out waiting for Readeck to finish extracting the replacement.', {
+            replacement: last,
         });
     }
 
@@ -237,42 +275,78 @@ export class ReadeckClient {
     /**
      * Repairs a bookmark by cloning metadata to a new URL and deprecating the old one.
      *
-     * Readeck's POST /bookmarks is async (202 Accepted + server-side fetch). PATCHing labels
-     * on a still-loading bookmark was racy — we now pass labels at creation time via the
-     * bookmarkCreate.labels field and then only PATCH is_marked / read_progress.
+     * Readeck's POST /bookmarks is async (202 Accepted + server-side fetch). We carry
+     * existing labels at creation time, wait for extraction to settle, and only then add
+     * the recovery marker and deprecate the original.
      *
      * @param {string} oldId
      * @param {string} newUrl
-     * @param {{ deprecateAction?: 'archive' | 'delete', recoveryLabel?: string, deprecationLabel?: string }} [options]
+     * @param {{ deprecateAction?: 'archive' | 'delete', recoveryLabel?: string, deprecationLabel?: string, onProgress?: Function }} [options]
      */
     async repairBookmark(oldId, newUrl, options = {}) {
         const {
             deprecateAction = 'archive',
             recoveryLabel = 'recovered',
             deprecationLabel = 'replaced',
+            onProgress,
         } = options;
         const original = await this.getBookmark(oldId);
+        onProgress?.({ step: 'original-loaded', original });
 
         // Inherit original labels except deprecation/recovery markers (in case the original
-        // was itself a prior replacement). Add this run's recovery label.
+        // was itself a prior replacement). The recovery marker is added only after
+        // Readeck verifies the replacement extraction.
         const carried = (original.labels || []).filter(l =>
             l !== 'replacement' &&
             !l.startsWith('recovered-') &&
             !l.startsWith('replaced-') &&
             l !== 'replaced'
         );
-        const newLabels = Array.from(new Set([...carried, recoveryLabel]));
 
         const replacement = await this.createBookmark({
             url: newUrl,
             created: original.created,
-            labels: newLabels,
+            labels: carried,
         });
+        onProgress?.({ step: 'created', replacement });
+
+        let settled = null;
+        try {
+            settled = await this.waitForBookmarkSettled(replacement.id, {
+                onProgress: ({ bookmark, elapsedMs }) => {
+                    onProgress?.({ step: 'extracting', replacement: bookmark, elapsedMs });
+                },
+            });
+        } catch (e) {
+            if (e instanceof ReadeckRepairError) throw e;
+            throw new ReadeckRepairError('Failed while waiting for Readeck to extract the replacement.', {
+                replacement,
+                cause: e,
+            });
+        }
+
+        if (isBookmarkErrored(settled)) {
+            let log = '';
+            try { log = await this.fetchExtractionLog(settled); } catch { /* best effort */ }
+            throw new ReadeckRepairError('Readeck could not extract the replacement bookmark.', {
+                replacement: settled,
+                log,
+            });
+        }
+        onProgress?.({ step: 'verified', replacement: settled });
 
         await this.updateBookmark(replacement.id, {
+            add_labels: [recoveryLabel],
             read_progress: original.read_progress,
             is_marked: original.is_marked,
         });
+        const verifiedReplacement = {
+            ...settled,
+            labels: Array.from(new Set([...(settled.labels || carried), recoveryLabel])),
+            read_progress: original.read_progress,
+            is_marked: original.is_marked,
+        };
+        onProgress?.({ step: 'labeled', replacement: verifiedReplacement });
 
         if (deprecateAction === 'delete') {
             await this.deleteBookmark(oldId);
@@ -284,8 +358,9 @@ export class ReadeckClient {
                 is_archived: true,
             });
         }
+        onProgress?.({ step: 'original-deprecated', replacement: verifiedReplacement });
 
-        return replacement;
+        return verifiedReplacement;
     }
 }
 
@@ -296,4 +371,18 @@ function toApiPath(src) {
     } catch {
         return src.startsWith('/') ? src : `/${src}`;
     }
+}
+
+function isBookmarkSettled(bookmark) {
+    if (!bookmark) return false;
+    if (bookmark.state === 0 || bookmark.state === 1) return true;
+    return bookmark.loaded === true && bookmark.state !== 2;
+}
+
+function isBookmarkErrored(bookmark) {
+    return bookmark?.state === 1;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }

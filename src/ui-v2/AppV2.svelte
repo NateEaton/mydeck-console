@@ -32,6 +32,7 @@
   import ManualUrlDialog from './components/ManualUrlDialog.svelte';
   import LogViewerDialog from './components/LogViewerDialog.svelte';
   import ApplyConfirmDialog from './components/ApplyConfirmDialog.svelte';
+  import ApplyStatusDialog from './components/ApplyStatusDialog.svelte';
   import SignInView from './components/SignInView.svelte';
   import SettingsView from './components/SettingsView.svelte';
   import RecoveredView from './components/RecoveredView.svelte';
@@ -148,6 +149,8 @@
   let showLogDialog = false;
   // { newUrl, source } | null while the Apply confirmation dialog is open
   let pendingApply = null;
+  // Status dialog shown while Readeck creates/extracts/verifies a replacement.
+  let applyStatus = null;
 
   let logText = '';
   let logLoading = false;
@@ -469,11 +472,20 @@
     pendingApply = null;
     const { recovery, deprecation } = LABELS_BY_SOURCE[source] ?? LABELS_BY_SOURCE.manual;
     const bookmarkId = selectedBookmark.id;
+    applyStatus = {
+      status: 'working',
+      title: 'Applying replacement',
+      message: 'Creating the replacement bookmark in Readeck.',
+      detail: 'The original will stay untouched until Readeck finishes extracting the new bookmark.',
+      replacement: { url: newUrl },
+      log: '',
+    };
     try {
-      await client.repairBookmark(bookmarkId, newUrl, {
+      const replacement = await client.repairBookmark(bookmarkId, newUrl, {
         recoveryLabel: recovery,
         deprecationLabel: deprecation,
         deprecateAction: disposition,
+        onProgress: updateApplyProgress,
       });
       await cache.deleteBookmark(bookmarkId);
       bookmarks = bookmarks.filter(b => b.id !== bookmarkId);
@@ -481,10 +493,86 @@
       selectedCandidate = null;
       archiveScored = [];
       braveScored =[];
+      applyStatus = {
+        status: 'success',
+        title: 'Replacement verified',
+        message: 'Readeck extracted the new bookmark successfully.',
+        detail: disposition === 'delete'
+          ? 'The original bookmark was deleted after verification.'
+          : 'The original bookmark was archived and labeled after verification.',
+        replacement,
+        log: '',
+      };
       refreshLabelCounts();
     } catch (e) {
-      alert(`Repair failed: ${e.message}`);
+      const verificationFailed = e?.name === 'ReadeckRepairError';
+      const classified = e?.log ? classifyExtractionLog(e.log) : classifyBookmarkState(e?.replacement);
+      applyStatus = {
+        status: 'error',
+        title: verificationFailed ? 'Replacement failed verification' : 'Repair failed',
+        message: classified?.summary && classified.summary !== 'Unavailable'
+          ? classified.summary
+          : (e.message || 'Readeck could not finish the repair.'),
+        detail: verificationFailed
+          ? 'The original bookmark was not archived or deleted. The failed replacement may still exist in Readeck without a recovered label.'
+          : 'The original bookmark may still need attention. Check Readeck before retrying to avoid creating a duplicate replacement.',
+        replacement: e?.replacement || { url: newUrl },
+        log: e?.log || '',
+      };
     }
+  }
+
+  function updateApplyProgress(event) {
+    if (!applyStatus) return;
+    const replacement = event.replacement || applyStatus.replacement;
+    let message = applyStatus.message;
+    let detail = applyStatus.detail;
+    if (event.step === 'created') {
+      message = 'Replacement bookmark created. Waiting for Readeck extraction.';
+      detail = 'This can take a little while for slow pages.';
+    } else if (event.step === 'extracting') {
+      const seconds = Math.max(1, Math.round((event.elapsedMs || 0) / 1000));
+      message = `Readeck is extracting the replacement (${seconds}s).`;
+      detail = 'The original will stay in triage until this finishes.';
+    } else if (event.step === 'verified') {
+      message = 'Extraction verified. Copying bookmark state and labeling the repair.';
+      detail = 'The original will be handled next.';
+    } else if (event.step === 'labeled') {
+      message = 'Replacement verified and labeled. Updating the original bookmark.';
+      detail = '';
+    } else if (event.step === 'original-deprecated') {
+      message = 'Repair complete.';
+      detail = '';
+    }
+
+    applyStatus = {
+      ...applyStatus,
+      message,
+      detail,
+      replacement,
+    };
+  }
+
+  function closeApplyStatus() {
+    applyStatus = null;
+  }
+
+  function openApplyStatusUrl() {
+    const url = applyStatus?.replacement?.url;
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function reviewRecoveredFromApplyStatus() {
+    applyStatus = null;
+    activeView = 'recovered';
+    selectedBookmark = null;
+    selectedCandidate = null;
+    archiveScored = [];
+    braveScored =[];
+    archiveError = null;
+    showFilterSheet = false;
+    showOverflowMenu = false;
   }
 
   function applyCurrentCandidate() {
@@ -1000,6 +1088,20 @@
     defaultDisposition={localStorage.getItem('apply_disposition') === 'delete' ? 'delete' : 'archive'}
     on:apply={confirmApplyRepair}
     on:cancel={cancelApplyRepair}
+  />
+{/if}
+
+{#if applyStatus}
+  <ApplyStatusDialog
+    status={applyStatus.status}
+    title={applyStatus.title}
+    message={applyStatus.message}
+    detail={applyStatus.detail}
+    replacement={applyStatus.replacement}
+    log={applyStatus.log}
+    on:close={closeApplyStatus}
+    on:open-url={openApplyStatusUrl}
+    on:review-recovered={reviewRecoveredFromApplyStatus}
   />
 {/if}
 
