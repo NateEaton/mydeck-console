@@ -554,7 +554,18 @@
   }
 
   function closeApplyStatus() {
+    const wasError = applyStatus?.status === 'error';
     applyStatus = null;
+    if (wasError) {
+      selectedCandidate = null;
+      selectedBookmark = null;
+      archiveScored = [];
+      braveScored = [];
+      archiveError = null;
+      logText = '';
+      logFetchedForId = null;
+      showOverflowMenu = false;
+    }
   }
 
   function openApplyStatusUrl() {
