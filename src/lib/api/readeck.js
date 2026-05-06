@@ -374,16 +374,29 @@ function toApiPath(src) {
 }
 
 function isBookmarkSettled(bookmark) {
+    if (bookmark?.loaded === true) return true;
     const state = bookmarkState(bookmark);
     return state === 0 || state === 1;
 }
 
 function isBookmarkErrored(bookmark) {
-    return bookmarkState(bookmark) === 1;
+    const state = bookmarkState(bookmark);
+    if (state === 1) return true;
+
+    // Robustness: if Readeck says it's loaded (state 0) but we have no title
+    // and no site information, it's effectively a failed extraction for our purposes.
+    if (bookmark?.loaded === true && state === 0) {
+        const hasTitle = !!(bookmark.title && bookmark.title.trim());
+        const hasSite = !!((bookmark.site_name && bookmark.site_name.trim()) || (bookmark.site && bookmark.site.trim()));
+        if (!hasTitle && !hasSite) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function bookmarkState(bookmark) {
-    if (bookmark?.state === '' || bookmark?.state === undefined || bookmark?.state === null) return null;
+    if (bookmark?.state === undefined || bookmark?.state === null || bookmark?.state === '') return null;
     const state = Number(bookmark.state);
     return Number.isFinite(state) ? state : null;
 }

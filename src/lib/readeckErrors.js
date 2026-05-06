@@ -31,7 +31,7 @@ const HTTP_STATUS_TEXT = {
  */
 export function classifyExtractionLog(logText) {
   const text = logText || '';
-  if (!text.trim()) return unknown();
+  if (!text.trim()) return null;
 
   const httpCodeMatch = text.match(/Invalid status code \((\d{3})\)/);
   if (httpCodeMatch) {
@@ -71,9 +71,7 @@ export function classifyExtractionLog(logText) {
   }
 
   // State-based fallbacks when no log content is conclusive.
-  if (/^\s*$/.test(text)) return unknown();
-
-  return unknown();
+  return null;
 }
 
 /**
@@ -84,18 +82,26 @@ export function classifyExtractionLog(logText) {
  * @returns {ClassifiedError}
  */
 export function classifyBookmarkState(bookmark) {
-  if (!bookmark) return unknown();
+  if (!bookmark) return null;
   const state = Number(bookmark.state);
   if (state === 1) {
-    return { kind: 'unknown', summary: 'Extraction failed', liveUrl: false };
+    return { kind: 'extract-failed', summary: 'Extraction failed', liveUrl: false };
   }
-  if (state === 2) {
+
+  // Robustness check: if loaded but empty, treat as extraction failure.
+  if (bookmark.loaded === true && state === 0) {
+    const hasTitle = !!(bookmark.title && bookmark.title.trim());
+    const hasSite = !!((bookmark.site_name && bookmark.site_name.trim()) || (bookmark.site && bookmark.site.trim()));
+    if (!hasTitle && !hasSite) {
+      return { kind: 'extract-failed', summary: 'Extraction failed (empty)', liveUrl: true };
+    }
+    return null;
+  }
+
+  if (state === 2 || bookmark.loaded === false) {
     return { kind: 'loading', summary: 'Still loading', liveUrl: false };
   }
-  if (bookmark.loaded === false) {
-    return { kind: 'loading', summary: 'Not yet loaded', liveUrl: false };
-  }
-  return unknown();
+  return null;
 }
 
 function unknown() {

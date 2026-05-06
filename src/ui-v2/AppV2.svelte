@@ -185,7 +185,7 @@
   };
   $: errorClass = selectedBookmark
     ? (logText
-        ? classifyExtractionLog(logText)
+        ? (classifyExtractionLog(logText) || classifyBookmarkState(selectedBookmark))
         : classifyBookmarkState(selectedBookmark))
     : null;
   $: routeMode = selectedCandidate ? 'preview' : (selectedBookmark ? 'bookmark' : 'drawer');
