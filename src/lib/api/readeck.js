@@ -320,6 +320,7 @@ export class ReadeckClient {
                 },
             });
         } catch (e) {
+            await this.deleteBookmark(replacement.id).catch(() => null);
             if (e instanceof ReadeckRepairError) throw e;
             throw new ReadeckRepairError('Failed while waiting for Readeck to extract the replacement.', {
                 replacement,
@@ -332,6 +333,7 @@ export class ReadeckClient {
 
         const logError = classifyExtractionLog(log);
         if (isBookmarkErrored(settled) || logError) {
+            await this.deleteBookmark(replacement.id).catch(() => null);
             throw new ReadeckRepairError(logError?.summary || 'Readeck could not extract the replacement bookmark.', {
                 replacement: settled,
                 log,
