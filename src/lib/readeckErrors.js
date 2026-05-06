@@ -85,7 +85,11 @@ export function classifyExtractionLog(logText) {
  */
 export function classifyBookmarkState(bookmark) {
   if (!bookmark) return unknown();
-  if (bookmark.state === 2) {
+  const state = Number(bookmark.state);
+  if (state === 1) {
+    return { kind: 'unknown', summary: 'Extraction failed', liveUrl: false };
+  }
+  if (state === 2) {
     return { kind: 'loading', summary: 'Still loading', liveUrl: false };
   }
   if (bookmark.loaded === false) {

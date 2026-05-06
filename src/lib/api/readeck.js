@@ -374,13 +374,18 @@ function toApiPath(src) {
 }
 
 function isBookmarkSettled(bookmark) {
-    if (!bookmark) return false;
-    if (bookmark.state === 0 || bookmark.state === 1) return true;
-    return bookmark.loaded === true && bookmark.state !== 2;
+    const state = bookmarkState(bookmark);
+    return state === 0 || state === 1;
 }
 
 function isBookmarkErrored(bookmark) {
-    return bookmark?.state === 1;
+    return bookmarkState(bookmark) === 1;
+}
+
+function bookmarkState(bookmark) {
+    if (bookmark?.state === '' || bookmark?.state === undefined || bookmark?.state === null) return null;
+    const state = Number(bookmark.state);
+    return Number.isFinite(state) ? state : null;
 }
 
 function sleep(ms) {
