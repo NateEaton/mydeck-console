@@ -70,6 +70,16 @@ export function classifyExtractionLog(logText) {
     };
   }
 
+  // Generic error fallback for any [ERRO] line.
+  if (/\[ERRO\]/i.test(text)) {
+    return {
+      kind: 'unknown',
+      summary: 'Extraction error',
+      detail: firstErrLine(text) || 'Readeck reported an error during extraction.',
+      liveUrl: false,
+    };
+  }
+
   // State-based fallbacks when no log content is conclusive.
   return null;
 }
@@ -109,9 +119,15 @@ function unknown() {
 }
 
 /** Return the first [ERRO] line's err="..." value, stripped of quotes. */
+/** Return the first [ERRO] line's message or err="..." value. */
 function firstErrLine(text) {
+  // Try to find err="..." first
   const m = text.match(/\[ERRO\][^\n]*?err="([^"]+)"/);
-  return m ? m[1] : '';
+  if (m) return m[1];
+  // Otherwise take the text following [ERRO] up to the next line or @ metadata
+  const m2 = text.match(/\[ERRO\]\s*([^@\n]+)/);
+  if (m2) return m2[1].trim();
+  return '';
 }
 
 function countMatches(text, regex) {

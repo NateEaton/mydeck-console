@@ -9,6 +9,8 @@
  * @property {string[]} labels
  */
 
+import { classifyExtractionLog } from '../readeckErrors.js';
+
 const PAGE_LIMIT = 100;
 const REPAIR_SETTLE_TIMEOUT_MS = 120 * 1000;
 const REPAIR_SETTLE_INTERVAL_MS = 1500;
@@ -325,10 +327,12 @@ export class ReadeckClient {
             });
         }
 
-        if (isBookmarkErrored(settled)) {
-            let log = '';
-            try { log = await this.fetchExtractionLog(settled); } catch { /* best effort */ }
-            throw new ReadeckRepairError('Readeck could not extract the replacement bookmark.', {
+        let log = '';
+        try { log = await this.fetchExtractionLog(settled); } catch { /* best effort */ }
+
+        const logError = classifyExtractionLog(log);
+        if (isBookmarkErrored(settled) || logError) {
+            throw new ReadeckRepairError(logError?.summary || 'Readeck could not extract the replacement bookmark.', {
                 replacement: settled,
                 log,
             });
