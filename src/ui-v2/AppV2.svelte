@@ -557,13 +557,8 @@
     const wasError = applyStatus?.status === 'error';
     applyStatus = null;
     if (wasError) {
+      // Keep the failed bookmark open so the user can try another candidate.
       selectedCandidate = null;
-      selectedBookmark = null;
-      archiveScored = [];
-      braveScored = [];
-      archiveError = null;
-      logText = '';
-      logFetchedForId = null;
       showOverflowMenu = false;
     }
   }
